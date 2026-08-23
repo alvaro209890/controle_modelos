@@ -1,0 +1,241 @@
+// Catálogo dos 13 agentes da frota Hermes nos 3 computadores
+const FLEET_AGENTS = [
+  // server-desktop (local)
+  {
+    id: 'server-default',
+    pc: 'server',
+    pcName: 'server-desktop',
+    profile: 'default',
+    name: 'Server Principal',
+    channel: '🖥️｜hermes-server-desktop',
+    channelId: '1528227053265096867',
+    guildId: '1528221963229859961',
+    guildName: 'Hermes Hub',
+    isRoot: true,
+    configPath: '/home/server/.hermes/config.yaml',
+    envPath: '/home/server/.hermes/.env',
+    description: 'Orquestrador geral do servidor e infraestrutura 24/7'
+  },
+  {
+    id: 'server-geoforest',
+    pc: 'server',
+    pcName: 'server-desktop',
+    profile: 'geoforest',
+    name: 'GeoForest Dev (Server)',
+    channel: '🌲｜geoforest',
+    channelId: '1540428678268457021',
+    guildId: '1528221963229859961',
+    guildName: 'Hermes Hub',
+    isRoot: false,
+    configPath: '/home/server/.hermes/profiles/geoforest/config.yaml',
+    envPath: '/home/server/.hermes/profiles/geoforest/.env',
+    description: 'Desenvolvimento e backend em produção do GeoForest-IA'
+  },
+  {
+    id: 'server-acompanhamento',
+    pc: 'server',
+    pcName: 'server-desktop',
+    profile: 'acompanhamento',
+    name: 'Acompanhamento (Server)',
+    channel: '📁｜acompanhamento',
+    channelId: '1540428680361410661',
+    guildId: '1528221963229859961',
+    guildName: 'Hermes Hub',
+    isRoot: false,
+    configPath: '/home/server/.hermes/profiles/acompanhamento/config.yaml',
+    envPath: '/home/server/.hermes/profiles/acompanhamento/.env',
+    description: 'Processos, prazos, Firestore e consultas de dados'
+  },
+  {
+    id: 'server-wms',
+    pc: 'server',
+    pcName: 'server-desktop',
+    profile: 'wms',
+    name: 'WMS / GeoServer',
+    channel: '🗺️｜wms',
+    channelId: '1540428682429079602',
+    guildId: '1528221963229859961',
+    guildName: 'Hermes Hub',
+    isRoot: false,
+    configPath: '/home/server/.hermes/profiles/wms/config.yaml',
+    envPath: '/home/server/.hermes/profiles/wms/.env',
+    description: 'GeoServer, workspace CBERS e serviço WMS público'
+  },
+
+  // acer (remoto via ssh acer)
+  {
+    id: 'acer-default',
+    pc: 'acer',
+    pcName: 'acer-Aspire-A515-45',
+    profile: 'default',
+    name: 'Acer Principal',
+    channel: '💻｜hermes-acer',
+    channelId: '1528549192774193314',
+    guildId: '1528545203869450381',
+    guildName: 'Hermes Acer',
+    isRoot: true,
+    configPath: '/home/acer/.hermes/config.yaml',
+    envPath: '/home/acer/.hermes/.env',
+    description: 'Orquestrador do notebook de desenvolvimento e testes'
+  },
+  {
+    id: 'acer-trello',
+    pc: 'acer',
+    pcName: 'acer-Aspire-A515-45',
+    profile: 'trello',
+    name: 'Trello SIMCAR',
+    channel: '📋｜trello-simcar',
+    channelId: '1540411181972463697',
+    guildId: '1528545203869450381',
+    guildName: 'Hermes Acer',
+    isRoot: false,
+    configPath: '/home/acer/.hermes/profiles/trello/config.yaml',
+    envPath: '/home/acer/.hermes/profiles/trello/.env',
+    description: 'Gestão oficial dos cartões do board SIMCAR no Trello'
+  },
+  {
+    id: 'acer-acompanhamento',
+    pc: 'acer',
+    pcName: 'acer-Aspire-A515-45',
+    profile: 'acompanhamento',
+    name: 'Acompanhamento IMAP (Acer)',
+    channel: '📁｜acompanhamento',
+    channelId: '1540411184153366609',
+    guildId: '1528545203869450381',
+    guildName: 'Hermes Acer',
+    isRoot: false,
+    configPath: '/home/acer/.hermes/profiles/acompanhamento/config.yaml',
+    envPath: '/home/acer/.hermes/profiles/acompanhamento/.env',
+    description: 'Execução do CLI IMAP e Chrome automatizado'
+  },
+  {
+    id: 'acer-geoforest',
+    pc: 'acer',
+    pcName: 'acer-Aspire-A515-45',
+    profile: 'geoforest',
+    name: 'GeoForest (Acer)',
+    channel: '🌲｜geoforest',
+    channelId: '1540414298432479252',
+    guildId: '1528545203869450381',
+    guildName: 'Hermes Acer',
+    isRoot: false,
+    configPath: '/home/acer/.hermes/profiles/geoforest/config.yaml',
+    envPath: '/home/acer/.hermes/profiles/geoforest/.env',
+    description: 'Ambiente local de testes do GeoForest-IA'
+  },
+  {
+    id: 'acer-solicitacoes',
+    pc: 'acer',
+    pcName: 'acer-Aspire-A515-45',
+    profile: 'solicitacoes',
+    name: 'Solicitações / E-mail',
+    channel: '✉️｜solicitacoes',
+    channelId: '1540414300286615683',
+    guildId: '1528545203869450381',
+    guildName: 'Hermes Acer',
+    isRoot: false,
+    configPath: '/home/acer/.hermes/profiles/solicitacoes/config.yaml',
+    envPath: '/home/acer/.hermes/profiles/solicitacoes/.env',
+    description: 'Rascunhos de e-mails, despachos e triagem Outlook'
+  },
+
+  // windows (remoto via ssh windows)
+  {
+    id: 'windows-default',
+    pc: 'windows',
+    pcName: 'PCQUE001IMAP',
+    profile: 'default',
+    name: 'Windows Principal',
+    channel: '🪟｜hermes-windows',
+    channelId: '1540595104044032020',
+    guildId: '1540593890120433754',
+    guildName: 'Hermes Windows',
+    isRoot: true,
+    configPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\config.yaml',
+    envPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\.env',
+    description: 'Orquestrador geral da estação Windows do escritório'
+  },
+  {
+    id: 'windows-cartografo',
+    pc: 'windows',
+    pcName: 'PCQUE001IMAP',
+    profile: 'cartografo',
+    name: 'Cartógrafo ArcGIS',
+    channel: '🗺️｜cartografo',
+    channelId: '1540595107584278589',
+    guildId: '1540593890120433754',
+    guildName: 'Hermes Windows',
+    isRoot: false,
+    configPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\cartografo\\config.yaml',
+    envPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\cartografo\\.env',
+    description: 'Automação ArcMap (.mxd), shapefiles e APF Rural com RT'
+  },
+  {
+    id: 'windows-documentos',
+    pc: 'windows',
+    pcName: 'PCQUE001IMAP',
+    profile: 'documentos',
+    name: 'Documentos IMAP',
+    channel: '📄｜documentos',
+    channelId: '1540595111392452638',
+    guildId: '1540593890120433754',
+    guildName: 'Hermes Windows',
+    isRoot: false,
+    configPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\documentos\\config.yaml',
+    envPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\documentos\\.env',
+    description: 'OCR, SIGA-DOC, planilhas e formulários do escritório'
+  },
+  {
+    id: 'windows-zelador',
+    pc: 'windows',
+    pcName: 'PCQUE001IMAP',
+    profile: 'zelador',
+    name: 'Zelador Windows',
+    channel: '🧹｜zelador',
+    channelId: '1540595114731114576',
+    guildId: '1540593890120433754',
+    guildName: 'Hermes Windows',
+    isRoot: false,
+    configPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\zelador\\config.yaml',
+    envPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\zelador\\.env',
+    description: 'Rotinas de vigilância de hora em hora e manutenção do host'
+  }
+];
+
+const HOSTS_INFO = {
+  server: {
+    id: 'server',
+    name: 'server-desktop',
+    displayName: '🖥️ Server Desktop',
+    os: 'Linux Ubuntu (24/7)',
+    ip: '100.65.138.58',
+    sshAlias: 'server',
+    isLocal: true,
+    guildName: 'Hermes Hub',
+    guildId: '1528221963229859961'
+  },
+  acer: {
+    id: 'acer',
+    name: 'acer-Aspire-A515-45',
+    displayName: '💻 Acer Notebook',
+    os: 'Linux Ubuntu (Dev)',
+    ip: '100.102.202.63',
+    sshAlias: 'acer',
+    isLocal: false,
+    guildName: 'Hermes Acer',
+    guildId: '1528545203869450381'
+  },
+  windows: {
+    id: 'windows',
+    name: 'PCQUE001IMAP',
+    displayName: '🪟 Windows IMAP',
+    os: 'Windows 10/11 (GIS)',
+    ip: '100.102.60.73',
+    sshAlias: 'windows',
+    isLocal: false,
+    guildName: 'Hermes Windows',
+    guildId: '1540593890120433754'
+  }
+};
+
+module.exports = { FLEET_AGENTS, HOSTS_INFO };

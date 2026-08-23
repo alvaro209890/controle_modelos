@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Modelos Hermes — Frota Álvaro</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <span class="brand-icon">🤖</span>
+        <div>
+          <h1>Controle de Modelos Hermes</h1>
+          <div class="brand-sub">Frota de IA • Gestão Centralizada dos 13 Agentes</div>
+        </div>
+      </div>
+      <div class="domain-badge">
+        <span class="pulse-dot"></span>
+        <span>modelos.cursar.space</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div id="fleet-summary" class="fleet-summary">
+        <span class="stat-pill"><strong id="stat-online-hosts">3/3</strong> PCs Online</span>
+        <span class="stat-pill"><strong id="stat-agents-count">13</strong> Agentes Ativos</span>
+      </div>
+      <button id="btn-refresh" class="btn btn-secondary" title="Recarregar status e configurações">
+        <span class="icon">🔄</span> Atualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- Global Action Bar -->
+  <section class="action-bar">
+    <div class="action-bar-left">
+      <button id="btn-open-batch" class="btn btn-primary">
+        <span class="icon">⚡</span> Trocar Modelo em Lote
+      </button>
+      <button id="btn-restart-all" class="btn btn-warning">
+        <span class="icon">🔄</span> Reiniciar Toda a Frota
+      </button>
+      <button id="btn-heal-all" class="btn btn-secondary">
+        <span class="icon">🩺</span> Curar Perfis (.env)
+      </button>
+    </div>
+    <div class="action-bar-right">
+      <input type="text" id="search-input" placeholder="🔍 Filtrar agente ou canal..." class="search-input">
+    </div>
+  </section>
+
+  <!-- Main Fleet Grid (3 Columns) -->
+  <main class="fleet-container">
+    <!-- Column: Server Desktop -->
+    <section class="host-column" id="col-server">
+      <div class="host-header" id="header-server">
+        <div class="host-title-row">
+          <div class="host-name">
+            <span class="host-icon">🖥️</span>
+            <div>
+              <h2>server-desktop</h2>
+              <span class="host-ip">100.65.138.58 • Linux 24/7</span>
+            </div>
+          </div>
+          <div class="host-status-badge" id="status-badge-server">
+            <span class="dot dot-online"></span> Online
+          </div>
+        </div>
+        <div class="host-meta">
+          <span>Gateway: <strong id="gw-server">Ativo</strong></span>
+          <div class="host-actions">
+            <button class="btn-xs btn-restart" onclick="restartHost('server')" title="Reiniciar Gateway">🔄 Reiniciar</button>
+            <button class="btn-xs btn-log" onclick="openLogs('server')" title="Ver Logs do Gateway">📋 Logs</button>
+            <button class="btn-xs btn-heal" onclick="healHost('server')" title="Curar Perfis">🩺 Curar</button>
+          </div>
+        </div>
+      </div>
+      <div class="agents-list" id="agents-server">
+        <!-- Injetado via JS -->
+      </div>
+    </section>
+
+    <!-- Column: Acer Notebook -->
+    <section class="host-column" id="col-acer">
+      <div class="host-header" id="header-acer">
+        <div class="host-title-row">
+          <div class="host-name">
+            <span class="host-icon">💻</span>
+            <div>
+              <h2>acer-Aspire-A515-45</h2>
+              <span class="host-ip">100.102.202.63 • Linux Dev</span>
+            </div>
+          </div>
+          <div class="host-status-badge" id="status-badge-acer">
+            <span class="dot dot-online"></span> Online
+          </div>
+        </div>
+        <div class="host-meta">
+          <span>Gateway: <strong id="gw-acer">Ativo</strong></span>
+          <div class="host-actions">
+            <button class="btn-xs btn-restart" onclick="restartHost('acer')" title="Reiniciar Gateway">🔄 Reiniciar</button>
+            <button class="btn-xs btn-log" onclick="openLogs('acer')" title="Ver Logs do Gateway">📋 Logs</button>
+            <button class="btn-xs btn-heal" onclick="healHost('acer')" title="Curar Perfis">🩺 Curar</button>
+          </div>
+        </div>
+      </div>
+      <div class="agents-list" id="agents-acer">
+        <!-- Injetado via JS -->
+      </div>
+    </section>
+
+    <!-- Column: Windows IMAP -->
+    <section class="host-column" id="col-windows">
+      <div class="host-header" id="header-windows">
+        <div class="host-title-row">
+          <div class="host-name">
+            <span class="host-icon">🪟</span>
+            <div>
+              <h2>PCQUE001IMAP</h2>
+              <span class="host-ip">100.102.60.73 • Windows GIS</span>
+            </div>
+          </div>
+          <div class="host-status-badge" id="status-badge-windows">
+            <span class="dot dot-online"></span> Online
+          </div>
+        </div>
+        <div class="host-meta">
+          <span>Gateway: <strong id="gw-windows">Ativo</strong></span>
+          <div class="host-actions">
+            <button class="btn-xs btn-restart" onclick="restartHost('windows')" title="Reiniciar Gateway">🔄 Reiniciar</button>
+            <button class="btn-xs btn-log" onclick="openLogs('windows')" title="Ver Logs do Gateway">📋 Logs</button>
+            <button class="btn-xs btn-heal" onclick="healHost('windows')" title="Curar Perfis">🩺 Curar</button>
+          </div>
+        </div>
+      </div>
+      <div class="agents-list" id="agents-windows">
+        <!-- Injetado via JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Troca de Modelo em Lote -->
+  <div id="modal-batch" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚡ Aplicar Modelo em Lote</h3>
+        <button class="btn-close" onclick="closeModal('modal-batch')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Alvo da Alteração:</label>
+          <select id="batch-target" class="form-control">
+            <option value="all">🌐 Toda a Frota (13 Agentes nos 3 PCs)</option>
+            <option value="server">🖥️ Apenas server-desktop (4 agentes)</option>
+            <option value="acer">💻 Apenas acer (5 agentes)</option>
+            <option value="windows">🪟 Apenas windows (4 agentes)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Modelo:</label>
+          <select id="batch-model" class="form-control">
+            <!-- Populado via JS -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Nível de Raciocínio (Reasoning Effort):</label>
+          <select id="batch-reasoning" class="form-control">
+            <option value="max">max (Máximo / Profundo)</option>
+            <option value="high">high (Alto)</option>
+            <option value="medium">medium (Médio)</option>
+            <option value="low">low (Baixo / Rápido)</option>
+            <option value="none">none (Desativado)</option>
+          </select>
+          <small class="form-hint" id="batch-reasoning-hint">Ox Alpha aceita apenas: low, high, max.</small>
+        </div>
+
+        <div class="form-group-checkbox">
+          <label>
+            <input type="checkbox" id="batch-auto-restart" checked>
+            Reiniciar os gateways afetados automaticamente após aplicar
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-batch')">Cancelar</button>
+        <button id="btn-execute-batch" class="btn btn-primary">Aplicar em Lote</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Teste de Conexão e Provider -->
+  <div id="modal-test" class="modal-overlay hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="test-modal-title">🧪 Teste de Conectividade do Agente</h3>
+        <button class="btn-close" onclick="closeModal('modal-test')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="test-spinner" class="test-loading">
+          <div class="spinner"></div>
+          <p>Executando cadeia completa do provider (resolvendo segredos, kwargs e chamada real)...</p>
+        </div>
+        <div id="test-result-box" class="terminal-box hidden">
+          <pre id="test-output"></pre>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-test')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer Lateral: Logs do Gateway -->
+  <div id="drawer-logs" class="drawer-overlay hidden">
+    <div class="drawer-panel">
+      <div class="drawer-header">
+        <h3 id="drawer-logs-title">📋 Logs do Gateway</h3>
+        <button class="btn-close" onclick="closeLogs()">✕</button>
+      </div>
+      <div class="drawer-body">
+        <pre id="drawer-logs-content" class="terminal-logs">Carregando logs...</pre>
+      </div>
+      <div class="drawer-footer">
+        <button class="btn btn-secondary" id="btn-refresh-log">🔄 Atualizar Logs</button>
+        <button class="btn btn-primary" onclick="closeLogs()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

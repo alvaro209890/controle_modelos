@@ -1,7 +1,7 @@
 // Estado global da aplicação
 let fleetData = {
   agents: [],
-  presets: [],
+  providers: [],
   hosts: {},
   currentLogHost: null
 };
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
-  await Promise.all([loadPresets(), loadFleetStatus(), loadAgents()]);
+  await Promise.all([loadProviders(), loadFleetStatus(), loadAgents()]);
   renderApp();
 }
 
@@ -24,6 +24,10 @@ function setupEventListeners() {
 
   document.getElementById('btn-open-batch').addEventListener('click', () => {
     openModal('modal-batch');
+    // Popula o catálogo no modal se ainda não tiver sido carregado
+    if (fleetData.providers.length && document.getElementById('batch-model').options.length === 0) {
+      populateBatchCatalog();
+    }
   });
 
   document.getElementById('btn-restart-all').addEventListener('click', () => {
@@ -48,23 +52,39 @@ function setupEventListeners() {
     filterAgents(e.target.value.toLowerCase());
   });
 
+  document.getElementById('batch-provider').addEventListener('change', (e) => {
+    onBatchProviderChange(e.target.value);
+  });
+
   document.getElementById('batch-model').addEventListener('change', (e) => {
-    updateReasoningHint('batch-reasoning-hint', e.target.value);
+    onBatchModelChange(e.target.value);
   });
 }
 
 // ==================== CARREGAMENTO DE DADOS ====================
 
-async function loadPresets() {
+function findProviderByModel(modelId) {
+  return fleetData.providers.find((p) => p.models.some((m) => m.id === modelId)) || null;
+}
+
+function findModelPresetLocal(modelId) {
+  for (const p of fleetData.providers) {
+    const m = p.models.find((mm) => mm.id === modelId);
+    if (m) return { ...m, provider: p.id, providerName: p.name, baseUrl: p.baseUrl, keyEnv: p.keyEnv, availableOn: p.availableOn };
+  }
+  return null;
+}
+
+async function loadProviders() {
   try {
-    const res = await fetch('/api/models/presets');
+    const res = await fetch('/api/models/providers');
     const data = await res.json();
     if (data.success) {
-      fleetData.presets = data.presets;
-      populateBatchPresetSelect();
+      fleetData.providers = data.providers;
+      populateBatchCatalog();
     }
   } catch (e) {
-    showToast('Erro ao carregar presets de modelos: ' + e.message, 'error');
+    showToast('Erro ao carregar provedores: ' + e.message, 'error');
   }
 }
 
@@ -110,12 +130,12 @@ function updateHostStatusUI() {
 
     if (h.online) onlineCount++;
 
-    const badge = document.getElementById(`status-badge-${hostKey}`);
-    const gwEl = document.getElementById(`gw-${hostKey}`);
+    const badge = document.getElementById('status-badge-' + hostKey);
+    const gwEl = document.getElementById('gw-' + hostKey);
 
     if (badge) {
-      badge.className = `host-status-badge ${h.online ? '' : 'offline'}`;
-      badge.innerHTML = `<span class="dot ${h.online ? 'dot-online' : 'dot-offline'}"></span> ${h.online ? 'Online' + (h.latencyMs !== null ? ` (${h.latencyMs}ms)` : '') : 'Offline'}`;
+      badge.className = 'host-status-badge ' + (h.online ? '' : 'offline');
+      badge.innerHTML = '<span class="dot ' + (h.online ? 'dot-online' : 'dot-offline') + '"></span> ' + (h.online ? 'Online' + (h.latencyMs !== null ? ' (' + h.latencyMs + 'ms)' : '') : 'Offline');
     }
 
     if (gwEl) {
@@ -123,11 +143,26 @@ function updateHostStatusUI() {
     }
   });
 
-  document.getElementById('stat-online-hosts').textContent = `${onlineCount}/3`;
+  document.getElementById('stat-online-hosts').textContent = onlineCount + '/3';
+}
+
+// Options de providers válidos para um dado PC (tem credencial naquela máquina)
+function providerOptionsForPC(pc) {
+  return fleetData.providers
+    .filter((p) => p.availableOn.includes(pc))
+    .map((p) => `<option value="${p.id}">${p.name} (${p.badge})</option>`)
+    .join('');
+}
+
+// Modelos de um provider (filtrados por PC, se informado)
+function modelOptionsForProvider(providerId, pc) {
+  const p = fleetData.providers.find((pp) => pp.id === providerId);
+  if (!p) return '';
+  return p.models.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
 }
 
 function renderAgentsByHost(pc) {
-  const container = document.getElementById(`agents-${pc}`);
+  const container = document.getElementById('agents-' + pc);
   if (!container) return;
 
   const agents = fleetData.agents.filter((a) => a.pc === pc);
@@ -136,120 +171,165 @@ function renderAgentsByHost(pc) {
   agents.forEach((agent) => {
     const card = document.createElement('div');
     card.className = 'agent-card';
-    card.id = `card-${agent.id}`;
-    card.dataset.name = `${agent.name} ${agent.channel} ${agent.profile}`.toLowerCase();
+    card.id = 'card-' + agent.id;
+    card.dataset.name = (agent.name + ' ' + agent.channel + ' ' + agent.profile).toLowerCase();
 
-    // Model options
-    const modelOptions = fleetData.presets
-      .map(
-        (p) => `<option value="${p.id}" ${agent.model === p.id ? 'selected' : ''}>${p.name}</option>`
-      )
-      .join('');
+    const providerOptions = providerOptionsForPC(pc);
+    // Se o provider atual do agente não tem credencial no PC, ainda mostra como opção custom
+    const knownProvider = findProviderByModel(agent.model);
 
-    // Reasoning options
-    const currentPreset = fleetData.presets.find((p) => p.id === agent.model);
-    const reasoningLevels = currentPreset && currentPreset.allowedReasoning
-      ? currentPreset.allowedReasoning
-      : ['max', 'high', 'medium', 'low', 'none'];
-    const extraReasoning = agent.reasoningEffort && !reasoningLevels.includes(agent.reasoningEffort)
-      ? `<option value="${agent.reasoningEffort}" selected>${agent.reasoningEffort} (atual)</option>`
-      : '';
-    const reasoningOptions = reasoningLevels
-      .map(
-        (lvl) => `<option value="${lvl}" ${agent.reasoningEffort === lvl ? 'selected' : ''}>${lvl}</option>`
-      )
-      .join('') + extraReasoning;
+    const providerSel = `
+      <div class="selector-group">
+        <label>Provedor:</label>
+        <select id="sel-provider-${agent.id}" class="form-control" onchange="onAgentProviderChange('${agent.id}')">
+          ${providerOptions}
+          ${knownProvider && !providerOptions.includes(`value="${knownProvider.id}"`) ? `<option value="${knownProvider.id}" selected>${knownProvider.name} (sem chave)</option>` : ''}
+        </select>
+      </div>`;
 
     card.innerHTML = `
       <div class="agent-card-header">
         <div class="agent-channel-info">
-          <div class="agent-channel-title">
-            <span>${agent.channel}</span>
-          </div>
+          <div class="agent-channel-title"><span>${agent.channel}</span></div>
           <div class="agent-channel-desc">${agent.description}</div>
         </div>
-        <span class="channel-id-badge" title="Clique para copiar o ID do canal" onclick="copyToClipboard('${agent.channelId}')">
-          ID: ${agent.channelId.slice(0, 7)}...
-        </span>
+        <span class="channel-id-badge" title="Clique para copiar o ID do canal" onclick="copyToClipboard('${agent.channelId}')">ID: ${agent.channelId.slice(0, 7)}...</span>
       </div>
 
-      <div class="agent-selectors">
+      <div class="agent-selectors agent-selectors-3col">
+        ${providerSel}
         <div class="selector-group">
           <label>Modelo:</label>
           <select id="sel-model-${agent.id}" class="form-control" onchange="onAgentModelChange('${agent.id}', this.value)">
-            ${modelOptions}
-            ${!fleetData.presets.some((p) => p.id === agent.model) ? `<option value="${agent.model}" selected>${agent.model} (custom)</option>` : ''}
+            <option value="">Selecione o modelo...</option>
           </select>
         </div>
-
         <div class="selector-group">
           <label>Reasoning:</label>
           <select id="sel-reasoning-${agent.id}" class="form-control">
-            ${reasoningOptions}
+            <option value="">Selecione o modelo...</option>
           </select>
         </div>
       </div>
 
       <div class="agent-card-actions">
-        <button class="btn-xs btn-test" onclick="testAgent('${agent.pc}', '${agent.profile}')" title="Testar chamada real do modelo">
-          🧪 Testar
-        </button>
-        <button class="btn-xs btn-save" onclick="saveAgentModel('${agent.pc}', '${agent.profile}', '${agent.id}')" title="Salvar configurações e criar backup">
-          💾 Salvar
-        </button>
+        <button class="btn-xs btn-test" onclick="testAgent('${agent.pc}', '${agent.profile}')" title="Testar chamada real do modelo">🧪 Testar</button>
+        <button class="btn-xs btn-save" onclick="saveAgentModel('${agent.pc}', '${agent.profile}', '${agent.id}')" title="Salvar configurações e criar backup">💾 Salvar</button>
       </div>
     `;
 
     container.appendChild(card);
+
+    // Popula os selects em cascata para o estado atual
+    const pSel = document.getElementById('sel-provider-' + agent.id);
+    const providerId = knownProvider ? knownProvider.id : (fleetData.providers[0] && fleetData.providers[0].id);
+    if (pSel) pSel.value = providerId;
+    refreshAgentModelOptions(agent.id, providerId);
+    const mSel = document.getElementById('sel-model-' + agent.id);
+    if (mSel && agent.model) {
+      if ([...mSel.options].some((o) => o.value === agent.model)) {
+        mSel.value = agent.model;
+      } else {
+        const opt = document.createElement('option');
+        opt.value = agent.model;
+        opt.textContent = agent.model + ' (custom)';
+        mSel.appendChild(opt);
+        mSel.value = agent.model;
+      }
+      refreshAgentReasoningOptions(agent.id);
+      const rSel = document.getElementById('sel-reasoning-' + agent.id);
+      if (rSel && agent.reasoningEffort) {
+        if ([...rSel.options].some((o) => o.value === agent.reasoningEffort)) {
+          rSel.value = agent.reasoningEffort;
+        } else {
+          const opt = document.createElement('option');
+          opt.value = agent.reasoningEffort;
+          opt.textContent = agent.reasoningEffort + ' (atual)';
+          rSel.appendChild(opt);
+          rSel.value = agent.reasoningEffort;
+        }
+      }
+    }
   });
 }
 
-function populateBatchPresetSelect() {
-  const select = document.getElementById('batch-model');
-  if (!select) return;
-  select.innerHTML = fleetData.presets
-    .map((p) => `<option value="${p.id}">${p.name} (${p.badge})</option>`)
-    .join('');
-  updateReasoningHint('batch-reasoning-hint', select.value);
+function refreshAgentModelOptions(agentId, providerId) {
+  const mSel = document.getElementById('sel-model-' + agentId);
+  const rSel = document.getElementById('sel-reasoning-' + agentId);
+  if (!mSel) return;
+  const opts = modelOptionsForProvider(providerId);
+  mSel.innerHTML = '<option value="">Selecione o modelo...</option>' + opts;
+  if (rSel) rSel.innerHTML = '<option value="">Selecione o modelo...</option>';
+}
+
+function refreshAgentReasoningOptions(agentId) {
+  const mSel = document.getElementById('sel-model-' + agentId);
+  const rSel = document.getElementById('sel-reasoning-' + agentId);
+  if (!mSel || !rSel) return;
+  const preset = findModelPresetLocal(mSel.value);
+  if (!preset) {
+    rSel.innerHTML = '<option value="">Selecione o modelo...</option>';
+    return;
+  }
+  rSel.innerHTML = preset.allowedReasoning.map((lvl) => `<option value="${lvl}">${lvl}</option>`).join('');
+  rSel.value = preset.defaultReasoning;
+}
+
+function onAgentProviderChange(agentId) {
+  const pSel = document.getElementById('sel-provider-' + agentId);
+  refreshAgentModelOptions(agentId, pSel.value);
 }
 
 function onAgentModelChange(agentId, selectedModel) {
-  const reasoningSelect = document.getElementById(`sel-reasoning-${agentId}`);
-  if (!reasoningSelect) return;
-
-  const preset = fleetData.presets.find((p) => p.id === selectedModel);
-  const levels = preset && preset.allowedReasoning
-    ? preset.allowedReasoning
-    : ['max', 'high', 'medium', 'low', 'none'];
-
-  reasoningSelect.innerHTML = levels.map((lvl) => `<option value="${lvl}">${lvl}</option>`).join('');
-  if (preset) {
-    reasoningSelect.value = preset.defaultReasoning;
-  } else {
-    reasoningSelect.value = 'max';
-  }
+  refreshAgentReasoningOptions(agentId);
 }
 
-function updateReasoningHint(elementId, modelId) {
-  const hintEl = document.getElementById(elementId);
-  if (!hintEl) return;
+// ==================== CATÁLOGO LOTE (Cascata) ====================
 
-  const preset = fleetData.presets.find((p) => p.id === modelId);
-  const reasonSelect = document.getElementById('batch-reasoning');
+function populateBatchCatalog() {
+  const pSel = document.getElementById('batch-provider');
+  if (!pSel || fleetData.providers.length === 0) return;
+  pSel.innerHTML = fleetData.providers.map((p) => `<option value="${p.id}">${p.name} (${p.badge})</option>`).join('');
+  onBatchProviderChange(pSel.value);
+}
 
-  if (preset) {
-    if (reasonSelect) {
-      reasonSelect.innerHTML = preset.allowedReasoning
-        .map((lvl) => `<option value="${lvl}">${lvl}</option>`)
-        .join('');
-      reasonSelect.value = preset.defaultReasoning;
-    }
-    hintEl.textContent = `⚠️ Níveis aceitos: ${preset.allowedReasoning.join(', ')}.`;
-    hintEl.style.color = 'var(--warning)';
-  } else {
-    hintEl.textContent = 'Níveis aceitos: none, low, medium, high.';
-    hintEl.style.color = 'var(--text-muted)';
+function onBatchProviderChange(providerId) {
+  const mSel = document.getElementById('batch-model');
+  if (!mSel) return;
+  const opts = modelOptionsForProvider(providerId);
+  mSel.innerHTML = opts ? '<option value="">Selecione o modelo...</option>' + opts : '<option value="">Nenhum modelo</option>';
+  const hint = document.getElementById('batch-provider-hint');
+  const p = fleetData.providers.find((pp) => pp.id === providerId);
+  if (hint && p) {
+    hint.textContent = 'Disponível em: ' + p.availableOn.join(', ') + ' • (chave: ' + p.keyEnv + ')';
   }
+  onBatchModelChange(mSel.value);
+}
+
+function onBatchModelChange(modelId) {
+  const rSel = document.getElementById('batch-reasoning');
+  const hint = document.getElementById('batch-reasoning-hint');
+  if (!rSel || !modelId) {
+    if (rSel) rSel.innerHTML = '<option value="">Selecione o modelo...</option>';
+    if (hint) hint.textContent = 'Selecione o modelo para ver os níveis aceitos.';
+    return;
+  }
+  const preset = findModelPresetLocal(modelId);
+  if (!preset) return;
+  rSel.innerHTML = preset.allowedReasoning.map((lvl) => `<option value="${lvl}">${lvl}${explainReasoning(lvl)}</option>`).join('');
+  rSel.value = preset.defaultReasoning;
+  if (hint) hint.textContent = '⚠️ Níveis aceitos por ' + modelId + ': ' + preset.allowedReasoning.join(', ') + '.';
+}
+
+function explainReasoning(level) {
+  const map = {
+    none: ' (sem raciocínio)',
+    low: ' (baixo/rápido)',
+    medium: ' (médio)',
+    high: ' (alto)',
+    max: ' (máximo/profundo)'
+  };
+  return map[level] || '';
 }
 
 function filterAgents(term) {
@@ -263,19 +343,25 @@ function filterAgents(term) {
 // ==================== AÇÕES E APIS ====================
 
 async function saveAgentModel(pc, profile, agentId) {
-  const modelSelect = document.getElementById(`sel-model-${agentId}`);
-  const reasoningSelect = document.getElementById(`sel-reasoning-${agentId}`);
+  const modelSelect = document.getElementById('sel-model-' + agentId);
+  const reasoningSelect = document.getElementById('sel-reasoning-' + agentId);
+  const providerSelect = document.getElementById('sel-provider-' + agentId);
 
   const model = modelSelect ? modelSelect.value : null;
   const reasoningEffort = reasoningSelect ? reasoningSelect.value : null;
+  const provider = providerSelect ? providerSelect.value : null;
 
-  const preset = fleetData.presets.find((p) => p.id === model) || {};
-  const provider = preset.provider;
-  const baseUrl = preset.baseUrl;
+  if (!model) {
+    showToast('Selecione um modelo antes de salvar.', 'error');
+    return;
+  }
+
+  const preset = findModelPresetLocal(model) || {};
+  const baseUrl = preset.baseUrl || '';
 
   try {
-    showToast(`Salvando modelo "${model}" no agente...`, 'info');
-    const res = await fetch(`/api/agents/${pc}/${profile}/model`, {
+    showToast('Salvando modelo "' + model + '" no agente...', 'info');
+    const res = await fetch('/api/agents/' + pc + '/' + profile + '/model', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, provider, baseUrl, reasoningEffort })
@@ -285,11 +371,12 @@ async function saveAgentModel(pc, profile, agentId) {
     if (data.success) {
       showToast(data.message, 'success');
       await loadAgents();
+      renderApp();
     } else {
-      showToast(`Erro ao salvar: ${data.error}`, 'error');
+      showToast('Erro ao salvar: ' + data.error, 'error');
     }
   } catch (e) {
-    showToast(`Falha na requisição: ${e.message}`, 'error');
+    showToast('Falha na requisição: ' + e.message, 'error');
   }
 }
 
@@ -297,15 +384,20 @@ async function executeBatchModel() {
   const target = document.getElementById('batch-target').value;
   const model = document.getElementById('batch-model').value;
   const reasoningEffort = document.getElementById('batch-reasoning').value;
+  const provider = document.getElementById('batch-provider').value;
   const autoRestart = document.getElementById('batch-auto-restart').checked;
 
-  const preset = fleetData.presets.find((p) => p.id === model) || {};
-  const provider = preset.provider;
-  const baseUrl = preset.baseUrl;
+  if (!model) {
+    showToast('Selecione um modelo para aplicar em lote.', 'error');
+    return;
+  }
+
+  const preset = findModelPresetLocal(model) || {};
+  const baseUrl = preset.baseUrl || '';
 
   try {
     closeModal('modal-batch');
-    showToast(`Aplicando "${model}" (${reasoningEffort}) em lote (${target})...`, 'info');
+    showToast('Aplicando "' + model + '" (' + reasoningEffort + ') em lote (' + target + ')...', 'info');
 
     const res = await fetch('/api/agents/batch', {
       method: 'POST',
@@ -315,25 +407,25 @@ async function executeBatchModel() {
 
     const data = await res.json();
     if (data.success) {
-      showToast(`Lote concluído: ${data.updatedCount} agentes atualizados com sucesso!`, 'success');
+      showToast('Lote concluído: ' + data.updatedCount + ' agentes atualizados com sucesso!', 'success');
       if (autoRestart) {
         showToast('Disparando reinício dos gateways afetados...', 'info');
-        await fetch(`/api/fleet/restart/${target}`, { method: 'POST' });
+        await fetch('/api/fleet/restart/' + target, { method: 'POST' });
         showToast('Gateways reiniciados!', 'success');
       }
       await initApp();
     } else {
-      showToast(`Lote finalizado com erros: ${JSON.stringify(data.errors)}`, 'error');
+      showToast('Lote finalizado com erros: ' + JSON.stringify(data.errors || data.error), 'error');
       await initApp();
     }
   } catch (e) {
-    showToast(`Falha ao executar lote: ${e.message}`, 'error');
+    showToast('Falha ao executar lote: ' + e.message, 'error');
   }
 }
 
 async function testAgent(pc, profile) {
   openModal('modal-test');
-  document.getElementById('test-modal-title').textContent = `🧪 Teste de Conexão: ${pc} / ${profile}`;
+  document.getElementById('test-modal-title').textContent = '🧪 Teste de Conexão: ' + pc + ' / ' + profile;
   document.getElementById('test-spinner').classList.remove('hidden');
   document.getElementById('test-result-box').classList.add('hidden');
 
@@ -351,25 +443,25 @@ async function testAgent(pc, profile) {
   } catch (e) {
     document.getElementById('test-spinner').classList.add('hidden');
     document.getElementById('test-result-box').classList.remove('hidden');
-    document.getElementById('test-output').textContent = `Erro ao executar teste: ${e.message}`;
+    document.getElementById('test-output').textContent = 'Erro ao executar teste: ' + e.message;
   }
 }
 
 async function restartHost(pc) {
-  if (!confirm(`Deseja realmente reiniciar o serviço do Hermes Gateway no host "${pc}"?`)) return;
+  if (!confirm('Deseja realmente reiniciar o serviço do Hermes Gateway no host "' + pc + '"?')) return;
 
   try {
-    showToast(`Reiniciando gateway em ${pc}...`, 'info');
-    const res = await fetch(`/api/fleet/restart/${pc}`, { method: 'POST' });
+    showToast('Reiniciando gateway em ' + pc + '...', 'info');
+    const res = await fetch('/api/fleet/restart/' + pc, { method: 'POST' });
     const data = await res.json();
     if (data.success) {
       showToast(data.message, 'success');
       setTimeout(loadFleetStatus, 2000);
     } else {
-      showToast(`Falha ao reiniciar: ${data.details?.error || data.error}`, 'error');
+      showToast('Falha ao reiniciar: ' + (data.details?.error || data.error), 'error');
     }
   } catch (e) {
-    showToast(`Erro na requisição: ${e.message}`, 'error');
+    showToast('Erro na requisição: ' + e.message, 'error');
   }
 }
 
@@ -385,22 +477,22 @@ async function restartAllFleet() {
       setTimeout(loadFleetStatus, 3000);
     }
   } catch (e) {
-    showToast(`Erro: ${e.message}`, 'error');
+    showToast('Erro: ' + e.message, 'error');
   }
 }
 
 async function healHost(pc) {
   try {
-    showToast(`Executando cura de perfis em ${pc}...`, 'info');
-    const res = await fetch(`/api/fleet/heal/${pc}`, { method: 'POST' });
+    showToast('Executando cura de perfis em ' + pc + '...', 'info');
+    const res = await fetch('/api/fleet/heal/' + pc, { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      showToast(`Cura concluída em ${pc}!`, 'success');
+      showToast('Cura concluída em ' + pc + '!', 'success');
     } else {
-      showToast(`Erro na cura: ${data.error}`, 'error');
+      showToast('Erro na cura: ' + data.error, 'error');
     }
   } catch (e) {
-    showToast(`Falha na requisição: ${e.message}`, 'error');
+    showToast('Falha na requisição: ' + e.message, 'error');
   }
 }
 
@@ -413,7 +505,7 @@ async function healAllFleet() {
       showToast('Cura executada com sucesso nos 3 computadores!', 'success');
     }
   } catch (e) {
-    showToast(`Erro: ${e.message}`, 'error');
+    showToast('Erro: ' + e.message, 'error');
   }
 }
 
@@ -424,16 +516,16 @@ async function openLogs(pc) {
   const content = document.getElementById('drawer-logs-content');
 
   drawer.classList.remove('hidden');
-  title.textContent = `📋 Logs do Gateway — ${pc}`;
+  title.textContent = '📋 Logs do Gateway — ' + pc;
   content.textContent = 'Carregando últimas linhas de log...';
 
   try {
-    const res = await fetch(`/api/fleet/logs/${pc}`);
+    const res = await fetch('/api/fleet/logs/' + pc);
     const data = await res.json();
     content.textContent = data.logs || 'Sem registros de log recentes.';
     content.scrollTop = content.scrollHeight;
   } catch (e) {
-    content.textContent = `Erro ao carregar logs: ${e.message}`;
+    content.textContent = 'Erro ao carregar logs: ' + e.message;
   }
 }
 
@@ -454,8 +546,8 @@ function closeModal(id) {
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <span>${message}</span>`;
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = '<span>' + (type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️') + '</span> <span>' + message + '</span>';
 
   container.appendChild(toast);
   setTimeout(() => {
@@ -466,5 +558,5 @@ function showToast(message, type = 'info') {
 
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text);
-  showToast(`ID copiado: ${text}`, 'info');
+  showToast('ID copiado: ' + text, 'info');
 }

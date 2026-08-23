@@ -8,12 +8,14 @@ Painel web centralizado e sem autenticação para monitoramento, controle granul
 
 Permitir que o Álvaro (ou qualquer agente autorizado) visualize e configure em tempo real, através de uma interface web simples e direta:
 1. **O modelo de IA de cada um dos 13 agentes Discord** nos 3 computadores (`server-desktop`, `acer`, `windows`).
-2. **O nível de raciocínio (*reasoning effort*)** de cada perfil (`none`, `low`, `medium`, `high`, `max`).
-3. **Ações em lote**: Trocar modelo de todos os agentes de um computador ou de toda a frota com 1 clique.
-4. **Reinício de Gateway independente por PC**: Reiniciar o gateway Hermes do servidor, do notebook ou do Windows sem interferir nos outros nós.
-5. **Testes de conectividade ao vivo**: Executar o script `testar-provider-perfil.py` para validar se as credenciais e o modelo respondem com HTTP 200 e com o reasoning correto no fio.
-6. **Cura e sincronização de perfis**: Disparar scripts de cura (`checar-perfis`) para alinhar variáveis de ambiente e `.env`.
-7. **Hospedagem no `server-desktop` e Domínio `cursar.space`**:
+2. **O nível de raciocínio (*reasoning effort*)** de cada perfil (`none`, `low`, `medium`, `high`, `max`) — sempre restrito ao que o **modelo selecionado** aceita.
+3. **Catálogo hierárquico Provider → Model → Reasoning**: primeiro escolhe-se o **provedor**, então aparecem apenas os **modelos disponíveis naquele provedor**, e então os **níveis de reasoning que aquele modelo aceita**.
+4. **Validação por credencial**: cada provedor declara em quais PCs tem chave (`availableOn`); o painel impede salvar um modelo de provedor sem credencial naquela máquina.
+5. **Ações em lote**: Trocar modelo de todos os agentes de um computador ou de toda a frota com 1 clique.
+6. **Reinício de Gateway independente por PC**: Reiniciar o gateway Hermes do servidor, do notebook ou do Windows sem interferir nos outros nós.
+7. **Testes de conectividade ao vivo**: Executar o script `testar-provider-perfil.py` para validar se as credenciais e o modelo respondem com HTTP 200 e com o reasoning correto no fio.
+8. **Cura e sincronização de perfis**: Disparar scripts de cura (`checar-perfis`) para alinhar variáveis de ambiente e `.env`.
+9. **Hospedagem no `server-desktop` e Domínio `cursar.space`**:
    - Backend e Frontend servidos **ambos neste PC** (`server-desktop`, produção 24/7).
    - O Express entrega a API e os arquivos estáticos da UI na mesma porta (`:9120`).
    - Exposição pública via **Cloudflare Tunnel** no domínio **`modelos.cursar.space`** (ou `controle-modelos.cursar.space`), sem senha.

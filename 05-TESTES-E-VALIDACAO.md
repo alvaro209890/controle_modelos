@@ -35,10 +35,36 @@ Listagem dos agentes e modelos:
 curl -s http://localhost:9120/api/agents | jq '.agents[] | {pc: .pc, profile: .profile, model: .model, reasoning: .reasoningEffort}'
 ```
 
-### Teste 1.5: Catálogo de Modelos (Presets)
+### Teste 1.5: Catálogo Hierárquico de Provedores
 ```bash
+# Novo endpoint hierárquico (Provider → Model → reasoning)
+curl -s http://localhost:9120/api/models/providers | jq '.providers[] | {id, availableOn, models: [.models[].id]}'
+# Esperado: 4 providers (opencode-go, xai-oauth, deepseek-standard, openrouter) com availableOn correto
+
+# Lista plana (retrocompatível)
 curl -s http://localhost:9120/api/models/presets | jq '.presets[] | .id'
-# Esperado: ox-alpha-free, deepseek-v4-flash, hy3, grok-4.6, deepseek-v4-pro
+# Esperado: ox-alpha-free, deepseek-v4-flash, hy3, grok-4.6, deepseek-v4-pro, deepseek-v4-flash (oficial), xiaomi/mimo-v2.5
+```
+
+### Teste 1.6: Validações de coerência do catálogo
+```bash
+# Provider ↔ Model incompatível → 400
+curl -s -X POST http://localhost:9120/api/agents/server/geoforest/model \
+  -H "Content-Type: application/json" \
+  -d '{"model":"grok-4.6","provider":"opencode-go","reasoningEffort":"high"}'
+# Esperado: 400 "O modelo grok-4.6 pertence ao provedor xai-oauth..."
+
+# Reasoning não aceito pelo modelo → 400
+curl -s -X POST http://localhost:9120/api/agents/server/geoforest/model \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ox-alpha-free","reasoningEffort":"medium"}'
+# Esperado: 400 "O modelo ox-alpha-free aceita apenas: low, high, max."
+
+# Batch com alvo sem credencial do provedor → 400 antes de gravar
+curl -s -X POST http://localhost:9120/api/agents/batch \
+  -H "Content-Type: application/json" \
+  -d '{"target":"windows","model":"grok-4.6","provider":"xai-oauth","reasoningEffort":"high"}'
+# Esperado: 400 "O provedor xai-oauth não tem credencial ... nos PCs: windows."
 ```
 
 ---

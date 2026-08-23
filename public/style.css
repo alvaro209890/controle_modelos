@@ -401,6 +401,20 @@ body {
   gap: 0.5rem;
 }
 
+.agent-selectors-3col {
+  grid-template-columns: 1fr 1fr;
+}
+
+.agent-selectors-3col .selector-group:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .agent-selectors-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
 .selector-group {
   display: flex;
   flex-direction: column;

@@ -44,7 +44,36 @@ controle_modelos/
 
 ---
 
-## 3. Catálogo de Agentes e Mapeamento (`services/agentDirectory.js`)
+## 3. Catálogo Hierárquico de Provedores e Modelos (`routes/models.js`)
+
+O catálogo deixou de ser uma lista plana e passou a ser **hierárquico**:
+
+```
+Provider (id, name, baseUrl, keyEnv, availableOn)  →  Model (id, name, allowedReasoning, defaultReasoning)
+```
+
+- **`availableOn`** — lista de PCs (`server`/`acer`/`windows`) em que aquele provedor tem **credencial real** (verificada no `.env` de cada máquina). O frontend usa isso para filtrar provedores elegíveis por coluna de PC, e o backend **recusa** um batch cujo alvo inclua um PC sem a chave do provedor.
+- **`allowedReasoning`** — níveis de reasoning aceitos por aquele modelo específico (ex.: `ox-alpha-free` só aceita `low`/`high`/`max`; `deepseek-v4-pro` aceita `none`/`low`/`medium`/`high`).
+- **`defaultReasoning`** — o nível padrão sugerido ao trocar para aquele modelo.
+
+### Endpoints
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/models/providers` | Catálogo hierárquico completo (Provider → Model → reasoning) |
+| `GET` | `/api/models/presets` | Lista plana derivada (retrocompatível) |
+
+### Validação de coerência (`routes/agents.js`)
+
+Ao salvar modelo individual ou em lote, o backend valida:
+
+1. **Provider ↔ Model**: se o provider informado não é o dono do modelo, recusa (`model X pertence ao provedor Y`).
+2. **Reasoning aceito**: se o `reasoningEffort` não está em `allowedReasoning` do modelo, recusa.
+3. **Credencial do alvo**: no batch, se o alvo inclui um PC sem a chave do provedor (`availableOn`), recusa antes de gravar qualquer arquivo.
+
+---
+
+## 4. Catálogo de Agentes e Mapeamento (`services/agentDirectory.js`)
 
 ```javascript
 const FLEET_AGENTS = [

@@ -39,9 +39,9 @@ Este documento detalha o design, os componentes visuais, os fluxos de interaçã
 |  +---------------------------+  +---------------------------+  +----------------+ |
 |  | 🖥️｜hermes-server-desktop  |  | 💻｜hermes-acer           |  | 🪟｜hermes-win  | |
 |  | Perfil: default           |  | Perfil: default           |  | Perfil: default| |
-|  | Modelo: [ox-alpha-free v] |  | Modelo: [ox-alpha-free v] |  | Modelo: [ox...] | |
-|  | Provider: opencode-go     |  | Provider: opencode-go     |  | Provider: ...  | |
-|  | Effort: [ max           v]|  | Effort: [ max           v]|  | Effort: [max v]| |
+|  | Provider: [opencode-go v] |  | Provider: [opencode-go v] |  | Provider: [..] | |
+|  | Modelo:  [ox-alpha-free v]|  | Modelo:  [ox-alpha-free v]|  | Modelo:  [..] | |
+|  | Effort:  [ max           v]|  | Effort:  [ max           v]|  | Effort: [max v]| |
 |  | [💾 Salvar] [🧪 Testar]   |  | [💾 Salvar] [🧪 Testar]   |  | [💾 Salvar]... | |
 |  +---------------------------+  +---------------------------+  +----------------+ |
 |  | 🌲｜geoforest             |  | 📋｜trello-simcar         |  | 🗺️｜cartografo  | |
@@ -82,12 +82,22 @@ Este documento detalha o design, os componentes visuais, os fluxos de interaçã
 
 ### C. Cards dos Agentes Discord
 - **Emoji e Canal do Discord** (`🌲｜geoforest`, `📋｜trello-simcar`, etc.) + ID do canal.
-- **Seletores de Modelo e Reasoning**:
-  - Dropdown com presets: `ox-alpha-free`, `deepseek-v4-flash`, `hy3`, `grok-4.6`, `deepseek-v4-pro`.
-  - Dropdown com níveis de esforço: `none`, `low`, `medium`, `high`, `max`.
+- **Cascata de Seletores (Provider → Model → Reasoning)**, alinhada ao catálogo hierárquico:
+  1. **Provider**: dropdown com os provedores que têm credencial naquele PC (`availableOn`). Ex.: no Windows só aparecem `opencode-go` e `deepseek-standard` (o `xai-oauth` não está disponível lá).
+  2. **Modelo**: ao trocar o provider, o dropdown de modelos é repovoado com **apenas os modelos daquele provider**.
+  3. **Reasoning**: ao escolher o modelo, o dropdown de reasoning é repovoado com **apenas os níveis aceitos por aquele modelo** (`allowedReasoning`), já marcando o `defaultReasoning`.
+- Em cada card o estado atual do agente é reconstruído: se o modelo ativo não estiver em nenhum provider homologado, é exibido como opção `(custom)`; se o reasoning ativo não estiver na lista do modelo, é exibido como `(atual)`.
 - **Botões "Salvar" e "Testar Conexão"**:
   - "Salvar" gera backup e atualiza o YAML.
   - "Testar Conexão" roda `testar-provider-perfil.py` e exibe o retorno ao vivo.
+
+---
+
+### C2. Modal de Troca de Modelo em Lote (cascata)
+- Mesma cascata do card individual: **Provider → Model → Reasoning**.
+- Ao selecionar o provider, uma dica mostra em quais PCs ele está disponível e qual variável de chave usa (`keyEnv`).
+- Ao selecionar o modelo, uma dica mostra os níveis de reasoning aceitos por aquele modelo.
+- O backend recusa o lote se o alvo incluir um PC sem a credencial do provedor escolhido.
 
 ---
 

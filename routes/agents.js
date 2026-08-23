@@ -2,21 +2,31 @@ const express = require('express');
 const router = express.Router();
 const { FLEET_AGENTS } = require('../services/agentDirectory');
 const { readRawConfig, writeRawConfig, parseAgentConfig, applyModelChangesToYaml } = require('../services/configManager');
-const { MODEL_PRESETS } = require('./models');
+const { findModelPreset } = require('./models');
 const { safeIdentifier, safeModel, safeReasoning, safeBaseUrl, safePc, safeBatchTarget } = require('../services/validation');
 
 function resolveModelDefaults(model, reasoningEffort) {
-  const preset = MODEL_PRESETS.find((p) => p.id === model);
+  const preset = findModelPreset(model);
   const effort = reasoningEffort || (preset ? preset.defaultReasoning : 'max');
   if (preset && !preset.allowedReasoning.includes(effort)) {
-    return { error: `O modelo "${model}" aceita apenas: ${preset.allowedReasoning.join(', ')}.` };
+    return { error: 'O modelo "' + model + '" aceita apenas: ' + preset.allowedReasoning.join(', ') + '.' };
   }
   return {
     preset,
     reasoningEffort: effort,
-    provider: preset ? preset.provider : (model === 'grok-4.6' ? 'xai-oauth' : 'opencode-go'),
-    baseUrl: preset ? preset.baseUrl : (model === 'grok-4.6' ? 'https://api.x.ai/v1' : 'https://opencode.ai/zen/go/v1')
+    provider: preset ? preset.provider : 'opencode-go',
+    baseUrl: preset ? preset.baseUrl : 'https://opencode.ai/zen/go/v1'
   };
+}
+
+// Valida a coerência entre provider e modelo se ambos forem informados
+function validateProviderModel(provider, model) {
+  const preset = findModelPreset(model);
+  if (!preset || !provider) return null; // sem preset ou provider livre, deixa passar
+  if (preset.provider !== provider) {
+    return 'O modelo "' + model + '" pertence ao provedor "' + preset.provider + '", não a "' + provider + '".';
+  }
+  return null;
 }
 
 /**
@@ -46,7 +56,7 @@ router.get('/', async (req, res) => {
         return {
           ...agent,
           online: true,
-          error: `Erro de parse YAML: ${parsed.error}`,
+          error: 'Erro de parse YAML: ' + parsed.error,
           model: 'indisponível',
           provider: 'indisponível',
           baseUrl: '',
@@ -111,6 +121,12 @@ router.post('/:pc/:profile/model', async (req, res) => {
     if (!provider) return res.status(400).json({ success: false, error: 'Provider inválido.' });
   }
 
+  // Coerência provider <-> modelo
+  const providerModelErr = validateProviderModel(provider, model);
+  if (providerModelErr) {
+    return res.status(400).json({ success: false, error: providerModelErr });
+  }
+
   let baseUrl = defaults.baseUrl;
   if (req.body.baseUrl !== undefined && req.body.baseUrl !== null && req.body.baseUrl !== '') {
     baseUrl = safeBaseUrl(req.body.baseUrl);
@@ -119,13 +135,13 @@ router.post('/:pc/:profile/model', async (req, res) => {
 
   const agent = FLEET_AGENTS.find((a) => a.pc === pc && a.profile === profile);
   if (!agent) {
-    return res.status(404).json({ success: false, error: `Agente não encontrado: ${pc} / ${profile}` });
+    return res.status(404).json({ success: false, error: 'Agente não encontrado: ' + pc + ' / ' + profile });
   }
 
   // Lê o config atual
   const readRes = await readRawConfig(agent.pc, agent.configPath);
   if (!readRes.success) {
-    return res.status(500).json({ success: false, error: `Falha ao ler configuração: ${readRes.error}` });
+    return res.status(500).json({ success: false, error: 'Falha ao ler configuração: ' + readRes.error });
   }
 
   const parsedOld = parseAgentConfig(readRes.content);
@@ -143,12 +159,12 @@ router.post('/:pc/:profile/model', async (req, res) => {
   // Grava com backup
   const writeRes = await writeRawConfig(agent.pc, agent.configPath, newContent);
   if (!writeRes.success) {
-    return res.status(500).json({ success: false, error: `Falha ao gravar arquivo: ${writeRes.error}` });
+    return res.status(500).json({ success: false, error: 'Falha ao gravar arquivo: ' + writeRes.error });
   }
 
   res.json({
     success: true,
-    message: `Modelo atualizado com sucesso para "${model}" (${reasoningEffort}) no agente ${agent.name}`,
+    message: 'Modelo atualizado com sucesso para "' + model + '" (' + reasoningEffort + ') no agente ' + agent.name,
     agent: agent.id,
     backupPath: writeRes.backupPath
   });
@@ -189,6 +205,12 @@ router.post('/batch', async (req, res) => {
     if (!provider) return res.status(400).json({ success: false, error: 'Provider inválido.' });
   }
 
+  // Coerência provider <-> modelo
+  const providerModelErr = validateProviderModel(provider, model);
+  if (providerModelErr) {
+    return res.status(400).json({ success: false, error: providerModelErr });
+  }
+
   let baseUrl = defaults.baseUrl;
   if (req.body.baseUrl !== undefined && req.body.baseUrl !== null && req.body.baseUrl !== '') {
     baseUrl = safeBaseUrl(req.body.baseUrl);
@@ -199,6 +221,19 @@ router.post('/batch', async (req, res) => {
     if (target === 'all') return true;
     return a.pc === target;
   });
+
+  // Se o alvo inclui um PC sem a chave do provedor, impede a operação
+  const preset = findModelPreset(model);
+  const affectedPCs = new Set(targetsToUpdate.map((a) => a.pc));
+  if (preset && preset.availableOn) {
+    const missingPCs = [...affectedPCs].filter((pc) => !preset.availableOn.includes(pc));
+    if (missingPCs.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'O provedor "' + preset.provider + '" não tem credencial (' + preset.keyEnv + ') nos PCs: ' + missingPCs.join(', ') + '. Remova-os do alvo ou escolha outro modelo.'
+      });
+    }
+  }
 
   if (targetsToUpdate.length === 0) {
     return res.status(404).json({ success: false, error: 'Nenhum agente encontrado para o alvo especificado.' });

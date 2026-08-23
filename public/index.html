@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Controle de Modelos Hermes — Frota Álvaro</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260823c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -164,6 +164,14 @@
         </div>
 
         <div class="form-group">
+          <label>Provedor:</label>
+          <select id="batch-provider" class="form-control">
+            <!-- Populado via JS -->
+          </select>
+          <small class="form-hint" id="batch-provider-hint">Selecione o provedor para listar os modelos disponíveis.</small>
+        </div>
+
+        <div class="form-group">
           <label>Modelo:</label>
           <select id="batch-model" class="form-control">
             <!-- Populado via JS -->
@@ -173,13 +181,9 @@
         <div class="form-group">
           <label>Nível de Raciocínio (Reasoning Effort):</label>
           <select id="batch-reasoning" class="form-control">
-            <option value="max">max (Máximo / Profundo)</option>
-            <option value="high">high (Alto)</option>
-            <option value="medium">medium (Médio)</option>
-            <option value="low">low (Baixo / Rápido)</option>
-            <option value="none">none (Desativado)</option>
+            <!-- Populado via JS -->
           </select>
-          <small class="form-hint" id="batch-reasoning-hint">Ox Alpha aceita apenas: low, high, max.</small>
+          <small class="form-hint" id="batch-reasoning-hint">Selecione o modelo para ver os níveis aceitos.</small>
         </div>
 
         <div class="form-group-checkbox">

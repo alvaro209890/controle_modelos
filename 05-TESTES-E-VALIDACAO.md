@@ -26,18 +26,18 @@ curl -s http://localhost:9120/api/fleet/status | jq .
 
 ### Teste 1.4: Leitura dos 13 Agentes
 ```bash
-curl -s http://localhost:9120/api/fleet/agents | jq 'length'
+curl -s http://localhost:9120/api/agents | jq '.count'
 # Esperado: 13
 ```
 
 Listagem dos agentes e modelos:
 ```bash
-curl -s http://localhost:9120/api/fleet/agents | jq '.[] | {pc: .pc, profile: .profile, model: .model, reasoning: .reasoningEffort}'
+curl -s http://localhost:9120/api/agents | jq '.agents[] | {pc: .pc, profile: .profile, model: .model, reasoning: .reasoningEffort}'
 ```
 
 ### Teste 1.5: Catálogo de Modelos (Presets)
 ```bash
-curl -s http://localhost:9120/api/models/presets | jq '.[] | .id'
+curl -s http://localhost:9120/api/models/presets | jq '.presets[] | .id'
 # Esperado: ox-alpha-free, deepseek-v4-flash, hy3, grok-4.6, deepseek-v4-pro
 ```
 

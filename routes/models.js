@@ -69,3 +69,4 @@ router.get('/presets', (req, res) => {
 });
 
 module.exports = router;
+module.exports.MODEL_PRESETS = MODEL_PRESETS;

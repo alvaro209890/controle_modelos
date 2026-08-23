@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { HOSTS_INFO } = require('../services/agentDirectory');
 const { runOnHost, probeHost } = require('../services/sshRunner');
+const { safeIdentifier, safePc, safeBatchTarget } = require('../services/validation');
 
 /**
  * GET /api/fleet/status
@@ -62,7 +63,7 @@ router.get('/status', async (req, res) => {
  * Reinicia o gateway Hermes no computador indicado ou em todos
  */
 router.post('/restart/:pc', async (req, res) => {
-  const { pc } = req.params;
+  const pc = safeBatchTarget(req.params.pc);
 
   if (pc === 'all') {
     const results = {};
@@ -104,7 +105,8 @@ async function restartHostGateway(host) {
  * Executa testar-provider-perfil.py no host e perfil informados
  */
 router.post('/test-provider', async (req, res) => {
-  const { pc, profile } = req.body;
+  const pc = safePc(req.body.pc);
+  const profile = safeIdentifier(req.body.profile);
 
   if (!pc || !profile) {
     return res.status(400).json({ success: false, error: 'Parâmetros "pc" e "profile" são obrigatórios.' });
@@ -137,7 +139,10 @@ router.post('/test-provider', async (req, res) => {
  * Dispara o script de cura checar-perfis no host
  */
 router.post('/heal/:pc', async (req, res) => {
-  const { pc } = req.params;
+  const pc = safeBatchTarget(req.params.pc);
+  if (!pc) {
+    return res.status(400).json({ success: false, error: 'Host inválido' });
+  }
 
   let cmd = '';
   if (pc === 'server' || pc === 'acer') {

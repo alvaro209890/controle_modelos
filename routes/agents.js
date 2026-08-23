@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { FLEET_AGENTS } = require('../services/agentDirectory');
 const { readRawConfig, writeRawConfig, parseAgentConfig, applyModelChangesToYaml } = require('../services/configManager');
+const { MODEL_PRESETS } = require('./models');
+const { safeIdentifier, safeModel, safeReasoning, safeBaseUrl, safePc, safeBatchTarget } = require('../services/validation');
+
+function resolveModelDefaults(model, reasoningEffort) {
+  const preset = MODEL_PRESETS.find((p) => p.id === model);
+  const effort = reasoningEffort || (preset ? preset.defaultReasoning : 'max');
+  if (preset && !preset.allowedReasoning.includes(effort)) {
+    return { error: `O modelo "${model}" aceita apenas: ${preset.allowedReasoning.join(', ')}.` };
+  }
+  return {
+    preset,
+    reasoningEffort: effort,
+    provider: preset ? preset.provider : (model === 'grok-4.6' ? 'xai-oauth' : 'opencode-go'),
+    baseUrl: preset ? preset.baseUrl : (model === 'grok-4.6' ? 'https://api.x.ai/v1' : 'https://opencode.ai/zen/go/v1')
+  };
+}
 
 /**
  * GET /api/agents
@@ -63,11 +79,42 @@ router.get('/', async (req, res) => {
  * Atualiza o modelo de um único agente
  */
 router.post('/:pc/:profile/model', async (req, res) => {
-  const { pc, profile } = req.params;
-  const { model, provider, baseUrl, reasoningEffort } = req.body;
+  const pc = safePc(req.params.pc);
+  const profile = safeIdentifier(req.params.profile);
 
+  if (!pc || !profile) {
+    return res.status(400).json({ success: false, error: 'Parâmetros "pc" ou "profile" inválidos.' });
+  }
+
+  const model = safeModel(req.body.model);
   if (!model) {
-    return res.status(400).json({ success: false, error: 'O parâmetro "model" é obrigatório.' });
+    return res.status(400).json({ success: false, error: 'O parâmetro "model" é obrigatório e inválido.' });
+  }
+
+  let reasoningEffort = null;
+  if (req.body.reasoningEffort !== undefined && req.body.reasoningEffort !== null && req.body.reasoningEffort !== '') {
+    reasoningEffort = safeReasoning(req.body.reasoningEffort);
+    if (!reasoningEffort) {
+      return res.status(400).json({ success: false, error: 'Nível de reasoning inválido. Use: none, low, medium, high, max.' });
+    }
+  }
+
+  const defaults = resolveModelDefaults(model, reasoningEffort);
+  if (defaults.error) {
+    return res.status(400).json({ success: false, error: defaults.error });
+  }
+  reasoningEffort = defaults.reasoningEffort;
+
+  let provider = defaults.provider;
+  if (req.body.provider !== undefined && req.body.provider !== null && req.body.provider !== '') {
+    provider = safeIdentifier(req.body.provider);
+    if (!provider) return res.status(400).json({ success: false, error: 'Provider inválido.' });
+  }
+
+  let baseUrl = defaults.baseUrl;
+  if (req.body.baseUrl !== undefined && req.body.baseUrl !== null && req.body.baseUrl !== '') {
+    baseUrl = safeBaseUrl(req.body.baseUrl);
+    if (!baseUrl) return res.status(400).json({ success: false, error: 'Base URL inválida.' });
   }
 
   const agent = FLEET_AGENTS.find((a) => a.pc === pc && a.profile === profile);
@@ -81,12 +128,16 @@ router.post('/:pc/:profile/model', async (req, res) => {
     return res.status(500).json({ success: false, error: `Falha ao ler configuração: ${readRes.error}` });
   }
 
+  const parsedOld = parseAgentConfig(readRes.content);
+  const previousModel = parsedOld.success ? parsedOld.data.model : null;
+
   // Aplica as alterações no YAML
   const newContent = applyModelChangesToYaml(readRes.content, {
     model,
-    provider: provider || (model === 'grok-4.6' ? 'xai-oauth' : 'opencode-go'),
-    baseUrl: baseUrl || (model === 'grok-4.6' ? 'https://api.x.ai/v1' : 'https://opencode.ai/zen/go/v1'),
-    reasoningEffort: reasoningEffort || (model === 'ox-alpha-free' ? 'max' : 'medium')
+    provider,
+    baseUrl,
+    reasoningEffort,
+    previousModel
   });
 
   // Grava com backup
@@ -97,7 +148,7 @@ router.post('/:pc/:profile/model', async (req, res) => {
 
   res.json({
     success: true,
-    message: `Modelo atualizado com sucesso para "${model}" (${reasoningEffort || 'max'}) no agente ${agent.name}`,
+    message: `Modelo atualizado com sucesso para "${model}" (${reasoningEffort}) no agente ${agent.name}`,
     agent: agent.id,
     backupPath: writeRes.backupPath
   });
@@ -108,14 +159,44 @@ router.post('/:pc/:profile/model', async (req, res) => {
  * Atualiza o modelo em lote por computador ou em toda a frota
  */
 router.post('/batch', async (req, res) => {
-  const { target, model, provider, baseUrl, reasoningEffort } = req.body;
-
+  const model = safeModel(req.body.model);
   if (!model) {
-    return res.status(400).json({ success: false, error: 'O parâmetro "model" é obrigatório.' });
+    return res.status(400).json({ success: false, error: 'O parâmetro "model" é obrigatório e inválido.' });
+  }
+
+  const target = safeBatchTarget(req.body.target);
+  if (!target) {
+    return res.status(400).json({ success: false, error: 'Alvo inválido. Use: all, server, acer ou windows.' });
+  }
+
+  let reasoningEffort = null;
+  if (req.body.reasoningEffort !== undefined && req.body.reasoningEffort !== null && req.body.reasoningEffort !== '') {
+    reasoningEffort = safeReasoning(req.body.reasoningEffort);
+    if (!reasoningEffort) {
+      return res.status(400).json({ success: false, error: 'Nível de reasoning inválido. Use: none, low, medium, high, max.' });
+    }
+  }
+
+  const defaults = resolveModelDefaults(model, reasoningEffort);
+  if (defaults.error) {
+    return res.status(400).json({ success: false, error: defaults.error });
+  }
+  reasoningEffort = defaults.reasoningEffort;
+
+  let provider = defaults.provider;
+  if (req.body.provider !== undefined && req.body.provider !== null && req.body.provider !== '') {
+    provider = safeIdentifier(req.body.provider);
+    if (!provider) return res.status(400).json({ success: false, error: 'Provider inválido.' });
+  }
+
+  let baseUrl = defaults.baseUrl;
+  if (req.body.baseUrl !== undefined && req.body.baseUrl !== null && req.body.baseUrl !== '') {
+    baseUrl = safeBaseUrl(req.body.baseUrl);
+    if (!baseUrl) return res.status(400).json({ success: false, error: 'Base URL inválida.' });
   }
 
   const targetsToUpdate = FLEET_AGENTS.filter((a) => {
-    if (!target || target === 'all') return true;
+    if (target === 'all') return true;
     return a.pc === target;
   });
 
@@ -134,11 +215,15 @@ router.post('/batch', async (req, res) => {
         continue;
       }
 
+      const parsedOld = parseAgentConfig(readRes.content);
+      const previousModel = parsedOld.success ? parsedOld.data.model : null;
+
       const newContent = applyModelChangesToYaml(readRes.content, {
         model,
-        provider: provider || (model === 'grok-4.6' ? 'xai-oauth' : 'opencode-go'),
-        baseUrl: baseUrl || (model === 'grok-4.6' ? 'https://api.x.ai/v1' : 'https://opencode.ai/zen/go/v1'),
-        reasoningEffort: reasoningEffort || (model === 'ox-alpha-free' ? 'max' : 'medium')
+        provider,
+        baseUrl,
+        reasoningEffort,
+        previousModel
       });
 
       const writeRes = await writeRawConfig(agent.pc, agent.configPath, newContent);

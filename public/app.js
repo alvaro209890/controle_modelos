@@ -147,12 +147,18 @@ function renderAgentsByHost(pc) {
       .join('');
 
     // Reasoning options
-    const reasoningLevels = ['max', 'high', 'medium', 'low', 'none'];
+    const currentPreset = fleetData.presets.find((p) => p.id === agent.model);
+    const reasoningLevels = currentPreset && currentPreset.allowedReasoning
+      ? currentPreset.allowedReasoning
+      : ['max', 'high', 'medium', 'low', 'none'];
+    const extraReasoning = agent.reasoningEffort && !reasoningLevels.includes(agent.reasoningEffort)
+      ? `<option value="${agent.reasoningEffort}" selected>${agent.reasoningEffort} (atual)</option>`
+      : '';
     const reasoningOptions = reasoningLevels
       .map(
         (lvl) => `<option value="${lvl}" ${agent.reasoningEffort === lvl ? 'selected' : ''}>${lvl}</option>`
       )
-      .join('');
+      .join('') + extraReasoning;
 
     card.innerHTML = `
       <div class="agent-card-header">
@@ -204,6 +210,7 @@ function populateBatchPresetSelect() {
   select.innerHTML = fleetData.presets
     .map((p) => `<option value="${p.id}">${p.name} (${p.badge})</option>`)
     .join('');
+  updateReasoningHint('batch-reasoning-hint', select.value);
 }
 
 function onAgentModelChange(agentId, selectedModel) {
@@ -211,16 +218,33 @@ function onAgentModelChange(agentId, selectedModel) {
   if (!reasoningSelect) return;
 
   const preset = fleetData.presets.find((p) => p.id === selectedModel);
+  const levels = preset && preset.allowedReasoning
+    ? preset.allowedReasoning
+    : ['max', 'high', 'medium', 'low', 'none'];
+
+  reasoningSelect.innerHTML = levels.map((lvl) => `<option value="${lvl}">${lvl}</option>`).join('');
   if (preset) {
     reasoningSelect.value = preset.defaultReasoning;
+  } else {
+    reasoningSelect.value = 'max';
   }
 }
 
 function updateReasoningHint(elementId, modelId) {
   const hintEl = document.getElementById(elementId);
   if (!hintEl) return;
-  if (modelId === 'ox-alpha-free') {
-    hintEl.textContent = '⚠️ Ox Alpha aceita apenas: low, high, max (outros dão erro 400).';
+
+  const preset = fleetData.presets.find((p) => p.id === modelId);
+  const reasonSelect = document.getElementById('batch-reasoning');
+
+  if (preset) {
+    if (reasonSelect) {
+      reasonSelect.innerHTML = preset.allowedReasoning
+        .map((lvl) => `<option value="${lvl}">${lvl}</option>`)
+        .join('');
+      reasonSelect.value = preset.defaultReasoning;
+    }
+    hintEl.textContent = `⚠️ Níveis aceitos: ${preset.allowedReasoning.join(', ')}.`;
     hintEl.style.color = 'var(--warning)';
   } else {
     hintEl.textContent = 'Níveis aceitos: none, low, medium, high.';

@@ -34,19 +34,19 @@ Permitir que o Álvaro (ou qualquer agente autorizado) visualize e configure em 
 
 Esta pasta foi estruturada com planos e especificações detalhadas para que qualquer agente de IA (Claude, Hermes, Codex, Cursor, Antigravity) possa implementar e manter o sistema com precisão cirúrgica:
 
-1. **[01-ARQUITETURA-E-MAPA-FROTA.md](file:///media/server/HD%20Backup/Servidores_NAO_MEXA/controle_modelos/01-ARQUITETURA-E-MAPA-FROTA.md)**  
+1. **[01-ARQUITETURA-E-MAPA-FROTA.md](01-ARQUITETURA-E-MAPA-FROTA.md)**  
    Topologia completa, caminhos de arquivos, serviços do sistema, formato dos arquivos YAML, infraestrutura de hosting no `server-desktop` e túnel `cursar.space`.
 
-2. **[02-BACKEND-API-ESPECIFICACAO.md](file:///media/server/HD%20Backup/Servidores_NAO_MEXA/controle_modelos/02-BACKEND-API-ESPECIFICACAO.md)**  
+2. **[02-BACKEND-API-ESPECIFICACAO.md](02-BACKEND-API-ESPECIFICACAO.md)**  
    Especificação técnica da API REST (Node.js/Express servindo API e Frontend), rotas, runner SSH, sistema de backup automático `.bak` e manipulador de YAML.
 
-3. **[03-FRONTEND-UI-UX-ESPECIFICACAO.md](file:///media/server/HD%20Backup/Servidores_NAO_MEXA/controle_modelos/03-FRONTEND-UI-UX-ESPECIFICACAO.md)**  
+3. **[03-FRONTEND-UI-UX-ESPECIFICACAO.md](03-FRONTEND-UI-UX-ESPECIFICACAO.md)**  
    Design do Dashboard, componentes visuais, seletores de modelos e reasoning, modals de lote, feedback de status e logs.
 
-4. **[04-PLANO-EXECUCAO-AGENTES.md](file:///media/server/HD%20Backup/Servidores_NAO_MEXA/controle_modelos/04-PLANO-EXECUCAO-AGENTES.md)**  
+4. **[04-PLANO-EXECUCAO-AGENTES.md](04-PLANO-EXECUCAO-AGENTES.md)**  
    Roteiro de desenvolvimento passo a passo para agentes criarem o código, frontend, serviço systemd e configuração do Cloudflare Tunnel no domínio `cursar.space`.
 
-5. **[05-TESTES-E-VALIDACAO.md](file:///media/server/HD%20Backup/Servidores_NAO_MEXA/controle_modelos/05-TESTES-E-VALIDACAO.md)**  
+5. **[05-TESTES-E-VALIDACAO.md](05-TESTES-E-VALIDACAO.md)**  
    Procedimento de testes automatizados e manuais, validação de integridade, testes de túnel público HTTPS e rollback de segurança.
 
 ---

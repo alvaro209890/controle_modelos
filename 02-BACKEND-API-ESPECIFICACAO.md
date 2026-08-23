@@ -93,7 +93,7 @@ Verifica a conectividade SSH e o status dos gateways nos 3 computadores.
 
 ---
 
-### 2. `GET /api/fleet/agents`
+### 2. `GET /api/agents`
 Lê os arquivos `config.yaml` dos 13 agentes e retorna o estado atualizado de cada um.
 
 **Resposta de Sucesso (200 OK):**
@@ -138,7 +138,7 @@ Atualiza o modelo e parâmetros de raciocínio de um agente individual com backu
 
 ---
 
-### 5. `POST /api/fleet/batch-model`
+### 5. `POST /api/agents/batch`
 Aplica a alteração de modelo em lote (`all`, `server`, `acer`, `windows`).
 
 ---

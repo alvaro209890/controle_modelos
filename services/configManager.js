@@ -20,7 +20,9 @@ async function readRawConfig(pc, configPath) {
   }
 
   // Se for host remoto
-  const cmd = pc === 'windows' ? `type "${configPath}"` : `cat "${configPath}"`;
+  const cmd = pc === 'windows'
+    ? `powershell -NoProfile -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Content -Raw -Encoding UTF8 '${configPath}'"`
+    : `cat "${configPath}"`;
   const res = await runOnHost(pc, cmd);
   if (!res.success) {
     return { success: false, error: `Falha ao ler arquivo via SSH (${pc}): ${res.stderr || res.error}` };
@@ -47,11 +49,12 @@ async function writeRawConfig(pc, configPath, newContent) {
     }
   }
 
-  // Backup e gravação remota no Linux (acer)
+  // Backup e gravação remota no Linux (acer) — grava em tmp e move (atômico)
   if (pc === 'acer') {
     const backupPath = `${configPath}.bak-controle-${timestamp}`;
+    const tmpPath = `${configPath}.tmp-controle-${timestamp}`;
     const base64Content = Buffer.from(newContent, 'utf8').toString('base64');
-    const remoteCmd = `cp "${configPath}" "${backupPath}" && echo "${base64Content}" | base64 -d > "${configPath}"`;
+    const remoteCmd = `cp "${configPath}" "${backupPath}" && echo "${base64Content}" | base64 -d > "${tmpPath}" && mv "${tmpPath}" "${configPath}" && rm -f "${tmpPath}"`;
     const res = await runOnHost(pc, remoteCmd);
     if (!res.success) {
       return { success: false, error: `Falha ao gravar via SSH no acer: ${res.stderr || res.error}` };
@@ -59,11 +62,12 @@ async function writeRawConfig(pc, configPath, newContent) {
     return { success: true, backupPath };
   }
 
-  // Backup e gravação remota no Windows usando PowerShell e Base64 para evitar problemas de encoding
+  // Backup e gravação remota no Windows usando PowerShell e Base64 (grava em tmp e move)
   if (pc === 'windows') {
     const backupPath = `${configPath}.bak-controle-${timestamp}`;
+    const tmpPath = `${configPath}.tmp-controle-${timestamp}`;
     const base64Content = Buffer.from(newContent, 'utf8').toString('base64');
-    const psCmd = `powershell -Command "Copy-Item -Path '${configPath}' -Destination '${backupPath}'; [System.IO.File]::WriteAllBytes('${configPath}', [System.Convert]::FromBase64String('${base64Content}'))"`;
+    const psCmd = `powershell -NoProfile -Command "Copy-Item -Path '${configPath}' -Destination '${backupPath}'; [System.IO.File]::WriteAllBytes('${tmpPath}', [System.Convert]::FromBase64String('${base64Content}')); Move-Item -Force -Path '${tmpPath}' -Destination '${configPath}'"`;
     const res = await runOnHost(pc, psCmd);
     if (!res.success) {
       return { success: false, error: `Falha ao gravar via SSH no Windows: ${res.stderr || res.error}` };
@@ -114,6 +118,7 @@ function applyModelChangesToYaml(rawContent, updates) {
   const providerName = updates.provider;
   const baseUrl = updates.baseUrl;
   const reasoningEffort = updates.reasoningEffort || 'max';
+  const previousModel = updates.previousModel || null;
 
   const lines = rawContent.split(/\r?\n/);
   const eol = rawContent.includes('\r\n') ? '\r\n' : '\n';
@@ -171,10 +176,16 @@ function applyModelChangesToYaml(rawContent, updates) {
       if (inReasoningOverrides) {
         if (/^    [a-zA-Z0-9_.-]+:/.test(line)) {
           const overrideKeyMatch = line.match(/^    ([a-zA-Z0-9_.-]+):/);
-          if (overrideKeyMatch && overrideKeyMatch[1] === modelName) {
-            newLines.push(`    ${modelName}: ${reasoningEffort}`);
-            overrideUpdated = true;
-            continue;
+          if (overrideKeyMatch) {
+            const overrideKey = overrideKeyMatch[1];
+            if (overrideKey === modelName) {
+              newLines.push(`    ${modelName}: ${reasoningEffort}`);
+              overrideUpdated = true;
+              continue;
+            }
+            if (previousModel && previousModel !== modelName && overrideKey === previousModel) {
+              continue;
+            }
           }
         } else if (!/^    /.test(line) && trimmed !== '') {
           // Saiu da sub-seção reasoning_overrides

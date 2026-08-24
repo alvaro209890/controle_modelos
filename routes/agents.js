@@ -242,10 +242,15 @@ router.post('/:pc/:profile/model', wrap(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Agente não encontrado: ' + pc + ' / ' + profile });
   }
 
+  // Rastro no journal: sem ele, "cliquei e não mudou" não tem como ser investigado depois.
+  console.log(`[modelo] ${pc}/${profile} <- ${payload.model} (${payload.reasoningEffort}) provider=${payload.provider} restart=${payload.restart}`);
+
   const applied = await applyToAgent(agent, payload);
   if (!applied.success) {
+    console.log(`[modelo] ${pc}/${profile} FALHOU: ${applied.error}`);
     return res.status(500).json({ success: false, error: applied.error });
   }
+  console.log(`[modelo] ${pc}/${profile} ok (${applied.unchanged ? 'sem alteração' : 'gravado, backup ' + applied.backupPath})`);
 
   let restart = null;
   if (payload.restart) {

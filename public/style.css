@@ -1208,3 +1208,64 @@ body.is-loading .fleet-container {
     font-size: 0.8rem;
   }
 }
+
+/* ================= RESULTADO NO CARD E CONFIRMAÇÃO EM DOIS TOQUES (2026-08-24) =================
+   Motivo: o Álvaro trocou o modelo, clicou em "Aplicar agora" (que só reiniciava o gateway,
+   sem gravar a seleção) e nada mudou. Agora o botão grava antes de reiniciar, o card guarda
+   por escrito o que aconteceu, e a confirmação acontece no próprio botão — o `window.confirm`
+   nativo era um ponto onde a gravação morria em silêncio. */
+
+.card-result {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  margin-top: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  word-break: break-word;
+}
+
+.card-result.hidden {
+  display: none;
+}
+
+.card-result.result-ok {
+  background-color: var(--success-bg);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #86efac;
+}
+
+.card-result.result-err {
+  background-color: var(--danger-bg);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.card-result.result-info {
+  background-color: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+}
+
+/* Botão armado aguardando o segundo toque */
+.btn-xs.armed,
+.btn.armed {
+  background-color: var(--danger) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  animation: armed-pulse 1s ease-in-out infinite;
+}
+
+@keyframes armed-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+/* Card conferindo o modelo no próprio agente */
+.agent-card.verifying .card-result::after {
+  content: ' ⏳';
+}
+
+@media (max-width: 900px) {
+  .card-result { font-size: 0.82rem; }
+}

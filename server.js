@@ -69,7 +69,7 @@ app.use('/api/models', modelsRoutes);
 
 // Endpoint simples de healthcheck
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'controle-modelos', uptime: process.uptime(), build: 'apply-and-restart' });
+  res.json({ status: 'ok', service: 'controle-modelos', uptime: process.uptime(), build: 'apply-and-verify' });
 });
 
 // Rota de API inexistente responde JSON. Antes caía no fallback de SPA e devolvia o index.html

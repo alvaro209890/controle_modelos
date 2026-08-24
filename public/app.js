@@ -223,6 +223,7 @@ function setupEventListeners() {
       setAutoRestart(e.target.checked);
       const batchChk = document.getElementById('batch-auto-restart');
       if (batchChk) batchChk.checked = e.target.checked;
+      refreshSaveButtonLabels();
       showToast(e.target.checked
         ? 'Salvar passará a reiniciar o gateway do PC (troca entra em vigor na hora).'
         : 'Salvar só gravará o arquivo — a troca só vale após reiniciar o gateway.', 'info');
@@ -480,7 +481,7 @@ function renderAgentsByHost(pc) {
 
       <div class="agent-card-actions">
         <button class="btn-xs btn-test" onclick="testAgent('${esc(agent.pc)}', '${esc(agent.profile)}')" title="Testar chamada real do modelo">🧪 Testar</button>
-        <button class="btn-xs btn-save" id="btn-save-${esc(agent.id)}" onclick="saveAgentModel('${esc(agent.pc)}', '${esc(agent.profile)}', '${esc(agent.id)}')" title="Grava no config.yaml (com backup) e aplica no gateway">💾 Salvar</button>
+        <button class="btn-xs btn-save" id="btn-save-${esc(agent.id)}" onclick="saveAgentModel('${esc(agent.pc)}', '${esc(agent.profile)}', '${esc(agent.id)}')" title="Grava no config.yaml (com backup) e, com o interruptor ligado, reinicia o gateway para valer na hora">${esc(saveButtonLabel())}</button>
       </div>
       </div><!-- /.agent-card-body -->
     `;
@@ -525,7 +526,7 @@ function renderAgentsByHost(pc) {
 
 /**
  * Faixa de estado do agente: erro de leitura, chaves faltando no YAML e — o principal —
- * o aviso de "gravado mas ainda não aplicado" com o botão de reiniciar o gateway.
+ * o aviso de "gravado mas ainda não aplicado" com o botão de aplicar.
  */
 function buildAgentStatusRow(agent) {
   const rows = [];
@@ -539,10 +540,14 @@ function buildAgentStatusRow(agent) {
   }
 
   if (agent.pendingRestart) {
+    // O botão chama applyAgent(): se houver seleção não salva na tela, ele SALVA e só então
+    // reinicia. Antes ele só reiniciava o gateway, então quem trocasse o modelo no select e
+    // clicasse aqui via o gateway reiniciar e o modelo continuar o mesmo — o arquivo nunca
+    // tinha sido gravado.
     rows.push(`
       <div class="agent-alert alert-pending">
-        <span>⏳ Gravado ${esc(fmtRelative(agent.lastWriteAt))}, <strong>ainda não aplicado</strong> — o Hermes só lê o config ao subir.</span>
-        <button class="btn-xs btn-apply" onclick="restartHost('${esc(agent.pc)}')">🔄 Aplicar agora (reiniciar ${esc(agent.pc)})</button>
+        <span>⏳ O arquivo mudou ${esc(fmtRelative(agent.lastWriteAt))} e o gateway ainda não releu — o Hermes só lê o config ao subir.</span>
+        <button class="btn-xs btn-apply" onclick="applyAgent('${esc(agent.id)}')">🔄 Aplicar agora</button>
       </div>`);
   }
 
@@ -553,7 +558,77 @@ function buildAgentStatusRow(agent) {
       <span class="unsaved-flag hidden">• alteração não salva</span>
     </div>`);
 
+  rows.push('<div class="card-result hidden"></div>');
+
   return rows.join('');
+}
+
+/**
+ * Resultado da última ação, escrito DENTRO do card.
+ *
+ * Toast some em segundos e passa despercebido; o card guarda o que aconteceu até o próximo
+ * refresh. É o antídoto para o "cliquei e não aconteceu nada".
+ */
+function setCardResult(agentId, type, text) {
+  const card = document.getElementById('card-' + agentId);
+  const box = card ? card.querySelector('.card-result') : null;
+  if (!box) return;
+  box.className = 'card-result result-' + type;
+  box.textContent = text;
+}
+
+function clearCardResult(agentId) {
+  const card = document.getElementById('card-' + agentId);
+  const box = card ? card.querySelector('.card-result') : null;
+  if (box) { box.className = 'card-result hidden'; box.textContent = ''; }
+}
+
+/**
+ * Confirmação em dois toques no próprio botão, sem `window.confirm`.
+ *
+ * O diálogo nativo era um ponto de falha silenciosa: cancelar (ou o Chrome suprimir diálogos
+ * repetidos) abortava a gravação sem deixar rastro na tela.
+ */
+function confirmInline(btn, label, action) {
+  if (!btn) return action();
+  if (btn.dataset.armed === '1') {
+    btn.dataset.armed = '0';
+    if (btn.dataset.armedLabel) btn.innerHTML = btn.dataset.armedLabel;
+    clearTimeout(Number(btn.dataset.armTimer));
+    return action();
+  }
+  btn.dataset.armed = '1';
+  btn.dataset.armedLabel = btn.innerHTML;
+  btn.innerHTML = label;
+  btn.classList.add('armed');
+  const t = setTimeout(() => {
+    btn.dataset.armed = '0';
+    btn.classList.remove('armed');
+    if (btn.dataset.armedLabel) btn.innerHTML = btn.dataset.armedLabel;
+  }, 6000);
+  btn.dataset.armTimer = String(t);
+}
+
+/**
+ * Botão "Aplicar agora" do card: se a tela tem alteração não salva, grava antes de reiniciar.
+ */
+function applyAgent(agentId) {
+  const card = document.getElementById('card-' + agentId);
+  const agent = fleetData.agents.find((a) => a.id === agentId);
+  if (!card || !agent) return;
+
+  if (card.classList.contains('dirty')) {
+    showToast('Há alteração não salva neste card — salvando antes de aplicar.', 'info');
+    return saveAgentModel(agent.pc, agent.profile, agentId, { forceRestart: true });
+  }
+
+  const btn = card.querySelector('.btn-apply');
+  const nAgentes = fleetData.agents.filter((a) => a.pc === agent.pc).length;
+  confirmInline(btn, `Confirmar? reinicia os ${nAgentes} agentes de ${agent.pc}`, async () => {
+    setCardResult(agentId, 'info', 'Reiniciando o gateway de ' + agent.pc + '...');
+    await restartHost(agent.pc, { skipConfirm: true });
+    setCardResult(agentId, 'ok', 'Gateway de ' + agent.pc + ' reiniciado — configuração do arquivo em vigor.');
+  });
 }
 
 function updateHostCounts() {
@@ -711,6 +786,19 @@ function filterAgents(term) {
 
 // ==================== AÇÕES E APIS ====================
 
+// O rótulo do botão diz o que ele REALMENTE vai fazer, conforme o interruptor da barra.
+function saveButtonLabel() {
+  return autoRestartEnabled() ? '💾 Salvar e aplicar' : '💾 Salvar (sem aplicar)';
+}
+
+function refreshSaveButtonLabels() {
+  document.querySelectorAll('.btn-save').forEach((b) => {
+    if (b.disabled) return;
+    b.innerHTML = saveButtonLabel();
+    delete b.dataset.originalLabel;
+  });
+}
+
 function setButtonBusy(btn, busy, busyLabel) {
   if (!btn) return;
   if (busy) {
@@ -723,7 +811,7 @@ function setButtonBusy(btn, busy, busyLabel) {
   }
 }
 
-async function saveAgentModel(pc, profile, agentId) {
+async function saveAgentModel(pc, profile, agentId, opts = {}) {
   const modelSelect = document.getElementById('sel-model-' + agentId);
   const reasoningSelect = document.getElementById('sel-reasoning-' + agentId);
   const providerSelect = document.getElementById('sel-provider-' + agentId);
@@ -734,20 +822,19 @@ async function saveAgentModel(pc, profile, agentId) {
   const provider = providerSelect ? providerSelect.value : null;
 
   if (!model) {
+    setCardResult(agentId, 'err', 'Selecione um modelo antes de salvar.');
     showToast('Selecione um modelo antes de salvar.', 'error');
     return;
   }
 
-  const restart = autoRestartEnabled();
-  if (restart && !confirm(
-    `Salvar "${model}" (${reasoningEffort || 'padrão'}) neste agente e REINICIAR o gateway de "${pc}"?\n\n` +
-    `O reinício é o que faz a troca valer — mas derruba momentaneamente todos os agentes desse PC.`
-  )) return;
-
+  // Sem `window.confirm` aqui: o interruptor da barra já diz que o gateway será reiniciado,
+  // e o diálogo nativo era o ponto onde a gravação morria em silêncio.
+  const restart = opts.forceRestart || autoRestartEnabled();
   const preset = findModelPresetLocal(model, provider) || {};
   const baseUrl = preset.baseUrl || '';
 
   setButtonBusy(btn, true, restart ? '⏳ Salvando e aplicando...' : '⏳ Salvando...');
+  setCardResult(agentId, 'info', `Gravando ${model} (${reasoningEffort || 'padrão'})...`);
   try {
     const data = await apiFetch('/api/agents/' + pc + '/' + profile + '/model', {
       method: 'POST',
@@ -755,30 +842,74 @@ async function saveAgentModel(pc, profile, agentId) {
       body: JSON.stringify({ model, provider, baseUrl, reasoningEffort, restart })
     });
 
-    if (data.success) {
-      const level = data.restart && !data.restart.success ? 'error' : (data.pendingRestart ? 'info' : 'success');
-      showToast(data.message, level);
-      if (data.insertedKeys && data.insertedKeys.length) {
-        showToast('Chaves criadas no YAML: ' + data.insertedKeys.join(', '), 'info');
-      }
-      await Promise.all([loadAgents(), loadFleetStatus()]);
-      renderApp();
-    } else {
+    if (!data.success) {
+      setCardResult(agentId, 'err', 'Erro ao salvar: ' + (data.error || 'desconhecido'));
       showToast('Erro ao salvar: ' + (data.error || 'desconhecido'), 'error');
+      return;
     }
+
+    showToast(data.message, data.restart && !data.restart.success ? 'error' : 'success');
+    if (data.insertedKeys && data.insertedKeys.length) {
+      showToast('Chaves criadas no YAML: ' + data.insertedKeys.join(', '), 'info');
+    }
+
+    let linha;
+    if (data.unchanged) {
+      linha = `Nada a gravar: o arquivo já estava em ${model} (${reasoningEffort}).`;
+    } else if (data.restart && data.restart.success) {
+      linha = `✅ Gravado ${model} (${reasoningEffort}) e gateway de ${pc} reiniciado.`;
+    } else if (data.restart) {
+      linha = `⚠️ Gravado ${model}, mas o reinício do gateway FALHOU — ainda não está em vigor.`;
+    } else {
+      linha = `Gravado ${model} (${reasoningEffort}). Reinicie o gateway de ${pc} para entrar em vigor.`;
+    }
+    setCardResult(agentId, data.restart && !data.restart.success ? 'err' : 'ok', linha);
+
+    await Promise.all([loadAgents(), loadFleetStatus()]);
+    renderApp();
+    setCardResult(agentId, data.restart && !data.restart.success ? 'err' : 'ok', linha);
+
+    // Prova final: pergunta ao próprio agente qual modelo ele resolveu.
+    if (restart && !data.unchanged) verifyAgent(pc, profile, agentId, model);
   } catch (e) {
+    setCardResult(agentId, 'err', 'Falha ao salvar: ' + e.message);
     showToast('Falha ao salvar: ' + e.message, 'error');
   } finally {
     setButtonBusy(btn, false);
   }
 }
 
-async function executeBatchModel() {
-  const target = document.getElementById('batch-target').value;
+/**
+ * Confere no próprio agente qual modelo ele está resolvendo depois da troca.
+ *
+ * Fecha o ciclo: o painel deixa de afirmar "aplicado" com base só no que ele mesmo gravou e
+ * passa a mostrar o que o `testar-provider-perfil.py` responde do outro lado.
+ */
+async function verifyAgent(pc, profile, agentId, modeloEsperado) {
+  const card = document.getElementById('card-' + agentId);
+  if (card) card.classList.add('verifying');
+  try {
+    const data = await apiFetch('/api/fleet/test-provider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pc, profile })
+    });
+    const saida = (data.output || '').trim();
+    const confere = saida.includes(modeloEsperado);
+    setCardResult(agentId, confere ? 'ok' : 'err',
+      (confere ? `✅ Confirmado no agente: ${modeloEsperado} · ` : `⚠️ O agente NÃO respondeu com ${modeloEsperado} · `) +
+      saida.split('\n').slice(-1)[0]);
+  } catch (e) {
+    setCardResult(agentId, 'info', 'Gravado e reiniciado; não foi possível confirmar no agente: ' + e.message);
+  } finally {
+    if (card) card.classList.remove('verifying');
+  }
+}
+
+// Clique no botão do modal: pede a confirmação no próprio botão e só então executa.
+function executeBatchModel() {
   const model = document.getElementById('batch-model').value;
-  const reasoningEffort = document.getElementById('batch-reasoning').value;
-  const provider = document.getElementById('batch-provider').value;
-  const restart = document.getElementById('batch-auto-restart').checked;
+  const target = document.getElementById('batch-target').value;
   const btn = document.getElementById('btn-execute-batch');
 
   if (!model) {
@@ -786,8 +917,17 @@ async function executeBatchModel() {
     return;
   }
 
-  const alvo = target === 'all' ? 'TODA a frota (13 agentes nos 3 PCs)' : `todos os agentes de "${target}"`;
-  if (!confirm(`Aplicar "${model}" (${reasoningEffort}) em ${alvo}?` + (restart ? '\n\nOs gateways afetados serão reiniciados em seguida.' : '\n\nSem reinício: a troca só valerá quando os gateways subirem de novo.'))) return;
+  const nAlvos = target === 'all' ? fleetData.agents.length : fleetData.agents.filter((a) => a.pc === target).length;
+  confirmInline(btn, `Confirmar? ${model} em ${nAlvos} agentes`, runBatchModel);
+}
+
+async function runBatchModel() {
+  const target = document.getElementById('batch-target').value;
+  const model = document.getElementById('batch-model').value;
+  const reasoningEffort = document.getElementById('batch-reasoning').value;
+  const provider = document.getElementById('batch-provider').value;
+  const restart = document.getElementById('batch-auto-restart').checked;
+  const btn = document.getElementById('btn-execute-batch');
 
   const preset = findModelPresetLocal(model, provider) || {};
   const baseUrl = preset.baseUrl || '';
@@ -845,8 +985,8 @@ async function testAgent(pc, profile) {
   }
 }
 
-async function restartHost(pc) {
-  if (!confirm('Reiniciar o Hermes Gateway no host "' + pc + '"?\n\nTodos os agentes desse PC ficam alguns segundos fora do ar e voltam já com a configuração nova.')) return;
+async function restartHost(pc, opts = {}) {
+  if (!opts.skipConfirm && !confirm('Reiniciar o Hermes Gateway no host "' + pc + '"?\n\nTodos os agentes desse PC ficam alguns segundos fora do ar e voltam já com a configuração nova.')) return;
 
   try {
     showToast('Reiniciando gateway em ' + pc + '...', 'info');

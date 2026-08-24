@@ -726,22 +726,76 @@ body {
 @media (max-width: 900px) {
   .fleet-container {
     grid-template-columns: 1fr;
-    padding: 0.85rem;
-    gap: 1rem;
+    padding: 0.75rem;
+    gap: 0.9rem;
   }
   .topbar {
-    padding: 0.75rem 1rem;
+    padding: 0.7rem 0.85rem;
+    gap: 0.5rem;
+  }
+  .topbar-left {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .brand { min-width: 0; }
+  .brand-icon { font-size: 1.7rem; }
+  .brand h1 { font-size: 1.1rem; white-space: normal; }
+  .brand-sub { font-size: 0.7rem; white-space: normal; }
+  .domain-badge {
+    max-width: 100%;
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .topbar-right {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
+  .fleet-summary { gap: 0.4rem; }
+  .stat-pill { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
   .action-bar {
-    padding: 0.7rem 1rem;
+    padding: 0.6rem 0.85rem;
+    gap: 0.55rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .action-bar-left {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .action-bar-left .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
   }
   .search-input {
     min-width: 100%;
     width: 100%;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  .host-header { padding: 0.85rem 0.9rem; }
+  .host-actions { flex-wrap: wrap; gap: 0.4rem; }
+  .host-actions .btn-xs {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+  .host-status-badge { white-space: nowrap; font-size: 0.72rem; }
+  .agent-card { padding: 0.85rem; }
+  .agent-card-header {
+    flex-direction: column;
+    gap: 0.3rem;
+    align-items: flex-start;
+  }
+  .channel-id-badge { align-self: flex-end; }
+  .agent-channel-desc {
+    white-space: normal;
+    overflow: visible;
   }
   .agent-selectors,
   .agent-selectors-3col {
@@ -750,28 +804,53 @@ body {
   .agent-selectors-3col .selector-group:nth-child(3) {
     grid-column: auto;
   }
+  .selector-group {
+    min-width: 0;
+  }
   .form-control {
+    width: 100%;
+    max-width: 100%;
     padding: 0.6rem 0.7rem;
     font-size: 0.9rem;
+    text-overflow: ellipsis;
   }
   .selector-group label {
     font-size: 0.75rem;
+    margin-top: 0.15rem;
   }
-  .btn {
-    padding: 0.55rem 0.9rem;
-    font-size: 0.9rem;
+  .agent-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+  }
+  .agent-card-actions .btn-xs {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.85rem;
+    justify-content: center;
+    min-height: 42px;
+    width: 100%;
   }
   .btn-xs {
-    padding: 0.45rem 0.65rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.82rem;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
-  .agent-card {
-    padding: 1rem;
+  .btn {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .topbar-right .btn {
+    min-height: 40px;
   }
   .modal-card {
     width: 100%;
     max-width: 100%;
-    min-height: 60vh;
+    min-height: auto;
     max-height: 92vh;
     margin: 0;
     border-radius: 0;
@@ -780,22 +859,23 @@ body {
     align-items: flex-end;
     padding: 0;
   }
-  .modal-body {
-    padding: 1.1rem;
+  .modal-header,
+  .modal-footer {
+    padding: 0.9rem 1rem;
   }
+  .modal-body {
+    padding: 1rem;
+    overflow-y: auto;
+  }
+  .form-group select {
+    width: 100%;
+  }
+  .form-hint { font-size: 0.72rem; }
   .drawer-panel {
     width: 100%;
     max-width: 100%;
   }
-  .fleet-summary {
-    flex-wrap: wrap;
-  }
-  .host-actions {
-    flex-wrap: wrap;
-  }
-  .agent-card-actions {
-    gap: 0.5rem;
-  }
+  .agent-card-actions { gap: 0.5rem; }
 }
 
 /* Telas muito pequenas: reduz spawn, botões de ação em linha cheia */

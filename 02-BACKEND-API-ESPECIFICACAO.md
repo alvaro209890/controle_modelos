@@ -259,3 +259,19 @@ falhas reais (2026-08-23):
 | **windows** | `hermes gateway stop && schtasks /Run /TN HermesGateway` | O shell padrão do **Windows OpenSSH é PowerShell 5.1**, que **não suporta `&&`** → erro de sintaxe. A cadeia é envolta em `cmd /c "…"` para o `cmd.exe` a interpretar. |
 
 Todos os três retornam `{ success: true }` após o restart, validados em produção (2026-08-23).
+
+## 7. Resiliência ao reboot do server (2026-08-24)
+
+O painel sobrevive a um reboot do server-desktop:
+
+- **Serviço systemd do usuário** com `Linger=yes` em `server` → arranca no boot sem login.
+- O unit declara `After=media-server-HD\x20Backup.mount` + `Wants=...` → **espera o HD externo
+  montar** antes de subir (evita corrida com a montagem; `Restart=always` cobre HD ausente).
+- `cloudflared.service` (túnel) `enabled` + `active` no boot.
+
+```bash
+# verificar:
+systemctl --user is-enabled controle-modelos.service   # enabled
+loginctl show-user server -p Linger                    # Linger=yes
+systemctl is-active cloudflared                        # active (system)
+```

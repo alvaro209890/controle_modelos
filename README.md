@@ -110,4 +110,21 @@ O reasoning de cada modelo é restrito ao que ele realmente aceita (ex.: `ox-alp
 
 O painel é **responsivo**: em telas ≤ 900px as 3 colunas viram 1, cards empilhados, toques maiores
 (botões/selects ampliados), modal em tela cheia na base e drawer de logs em largura total. Teste no
-celular entra direto pelo `https://modelos.cursar.space`.
+celular entra direto pelo `https://modelos.cursar.space`. Validação visual em viewport 390px
+(Chrome headless) confirmou layout sem overflow horizontal, botões com altura de toque (≥40px) e
+labels de provider/modelo legíveis.
+
+## ♻️ Sobrevivência ao reinício (reboot do server)
+
+O painel sobe sozinho após um reboot do server-desktop:
+
+- `controle-modelos.service` é um serviço **systemd do usuário `server`** com
+  `WantedBy=default.target`. O usuário tem **`Linger=yes`** (via `loginctl show-user server`), então
+  os serviços do usuário arrancam no boot **sem precisar de login**.
+- O unit declara `After=media-server-HD\x20Backup.mount` + `Wants=...` → o painel **espera o HD
+  externo montar** antes de subir (não há corrida com a montagem; se o HD faltar, o `Restart=always`
+  tenta de novo até o mount aparecer).
+- `cloudflared.service` (túnel público `modelos.cursar.space`) está `enabled` + `active` e sobe no
+  boot (system service).
+- Backups: os `.env` recebem `.bak-*` antes de editais; o repo é re-montado via
+  `git reset --hard origin/main` após deploy.

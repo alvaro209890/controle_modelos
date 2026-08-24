@@ -197,11 +197,11 @@ async function buildProviders() {
     },
     {
       id: 'opencode-zen',
-      name: 'OpenCode (Zen — grátis)',
+      name: 'OpenCode Zen (grátis)',
       baseUrl: 'https://opencode.ai/zen/v1',
       keyEnv: 'OPENCODE_ZEN_API_KEY',
       availableOn: ['server', 'acer', 'windows'],
-      badge: 'Gratuitos do OpenCode normal',
+      badge: '6 grátis',
       description: 'Modelos GRATUITOS do OpenCode normal (endpoint /zen/v1), todos validados em HTTP 200 (2026-08-24).',
       models: ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'].map((id) => {
         const m = buildModel(id);
@@ -308,7 +308,7 @@ function _fallbackProviders() {
     description: 'Catálogo base.',
     models: baseGoIds().map(buildModel)
   }, {
-    id: 'opencode-zen', name: 'OpenCode (Zen — grátis)', baseUrl: 'https://opencode.ai/zen/v1', keyEnv: 'OPENCODE_ZEN_API_KEY',
+    id: 'opencode-zen', name: 'OpenCode Zen (grátis)', baseUrl: 'https://opencode.ai/zen/v1', keyEnv: 'OPENCODE_ZEN_API_KEY',
     availableOn: ['server', 'acer', 'windows'], badge: 'Gratuitos do OpenCode normal', description: 'Modelos gratuitos validados (HTTP 200).',
     models: ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'].map((id) => {
       const m = buildModel(id);

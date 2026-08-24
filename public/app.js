@@ -6,6 +6,85 @@ let fleetData = {
   currentLogHost: null
 };
 
+// ==================== ESTADO RETRÁTIL (mobile-first, 2026-08-23) ====================
+// Persistência local do que está recolhido: hosts e cards de agente.
+const LS_HOSTS_KEY = 'cm-collapsed-hosts';
+const LS_AGENTS_KEY = 'cm-collapsed-agents';
+
+function loadCollapsedSet(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); }
+  catch { return new Set(); }
+}
+
+function saveCollapsedSet(key, set) {
+  try { localStorage.setItem(key, JSON.stringify([...set])); } catch {}
+}
+
+let collapsedHosts = loadCollapsedSet(LS_HOSTS_KEY);
+let collapsedAgents = loadCollapsedSet(LS_AGENTS_KEY);
+
+function toggleHost(pc) {
+  const isOpen = !collapsedHosts.has(pc);
+  setHostCollapsed(pc, isOpen, true);
+}
+
+function setHostCollapsed(pc, collapsed, persist) {
+  const col = document.getElementById('col-' + pc);
+  const chev = document.getElementById('chev-' + pc);
+  const header = document.getElementById('header-' + pc);
+  if (!col) return;
+  col.classList.toggle('collapsed', collapsed);
+  if (chev) chev.textContent = collapsed ? '▸' : '▾';
+  if (header) header.setAttribute('aria-expanded', String(!collapsed));
+  if (persist) {
+    if (collapsed) collapsedHosts.add(pc); else collapsedHosts.delete(pc);
+    saveCollapsedSet(LS_HOSTS_KEY, collapsedHosts);
+  }
+}
+
+function toggleAgent(agentId) {
+  const card = document.getElementById('card-' + agentId);
+  if (!card) return;
+  setAgentCollapsed(agentId, !card.classList.contains('collapsed'), true);
+}
+
+function setAgentCollapsed(agentId, collapsed, persist) {
+  const card = document.getElementById('card-' + agentId);
+  if (!card) return;
+  card.classList.toggle('collapsed', collapsed);
+  const body = card.querySelector('.agent-card-body');
+  const chip = card.querySelector('.agent-current-chip');
+  const chev = card.querySelector('.agent-chevron');
+  if (body) body.classList.toggle('hidden', collapsed);
+  if (chip) chip.classList.toggle('hidden', !collapsed);
+  if (chev) chev.textContent = collapsed ? '▸' : '▾';
+  if (persist) {
+    if (collapsed) collapsedAgents.add(agentId); else collapsedAgents.delete(agentId);
+    saveCollapsedSet(LS_AGENTS_KEY, collapsedAgents);
+  }
+}
+
+function applySavedCollapse() {
+  ['server', 'acer', 'windows'].forEach((pc) => setHostCollapsed(pc, collapsedHosts.has(pc), false));
+  fleetData.agents.forEach((a) => {
+    if (collapsedAgents.has(a.id)) setAgentCollapsed(a.id, true, false);
+  });
+}
+
+// Chip compacto com a configuração atual (visível quando o card está recolhido)
+function updateAgentChip(agentId) {
+  const card = document.getElementById('card-' + agentId);
+  const chip = card ? card.querySelector('.agent-current-chip') : null;
+  if (!chip) return;
+  const mSel = document.getElementById('sel-model-' + agentId);
+  const rSel = document.getElementById('sel-reasoning-' + agentId);
+  const pSel = document.getElementById('sel-provider-' + agentId);
+  const parts = [];
+  if (pSel && pSel.selectedOptions[0]) parts.push(pSel.selectedOptions[0].textContent.split('(')[0].trim());
+  if (mSel && mSel.value) parts.push(mSel.value + (rSel && rSel.value ? ' · ' + rSel.value : ''));
+  chip.textContent = parts.length ? '⚙️ ' + parts.join(' → ') : '⚙️ configuração não definida';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
   setupEventListeners();
@@ -225,14 +304,16 @@ function renderAgentsByHost(pc) {
       </div>`;
 
     card.innerHTML = `
-      <div class="agent-card-header">
+      <div class="agent-card-header" onclick="toggleAgent('${agent.id}')" role="button" tabindex="0" aria-expanded="true" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAgent('${agent.id}');}">
         <div class="agent-channel-info">
-          <div class="agent-channel-title"><span>${agent.channel}</span></div>
+          <div class="agent-channel-title"><span class="agent-chevron">▾</span> <span>${agent.channel}</span></div>
           <div class="agent-channel-desc">${agent.description}</div>
+          <span class="agent-current-chip hidden"></span>
         </div>
-        <span class="channel-id-badge" title="Clique para copiar o ID do canal" onclick="copyToClipboard('${agent.channelId}')">ID: ${agent.channelId.slice(0, 7)}...</span>
+        <span class="channel-id-badge" title="Clique para copiar o ID do canal" onclick="event.stopPropagation();copyToClipboard('${agent.channelId}')">ID: ${agent.channelId.slice(0, 7)}...</span>
       </div>
 
+      <div class="agent-card-body">
       <div class="agent-selectors agent-selectors-3col">
         ${providerSel}
         <div class="selector-group">
@@ -253,6 +334,7 @@ function renderAgentsByHost(pc) {
         <button class="btn-xs btn-test" onclick="testAgent('${agent.pc}', '${agent.profile}')" title="Testar chamada real do modelo">🧪 Testar</button>
         <button class="btn-xs btn-save" onclick="saveAgentModel('${agent.pc}', '${agent.profile}', '${agent.id}')" title="Salvar configurações e criar backup">💾 Salvar</button>
       </div>
+      </div><!-- /.agent-card-body -->
     `;
 
     container.appendChild(card);
@@ -287,7 +369,24 @@ function renderAgentsByHost(pc) {
         }
       }
     }
+    updateAgentChip(agent.id);
   });
+  applySavedCollapse();
+  updateHostCounts();
+}
+
+function updateHostCounts() {
+  ['server', 'acer', 'windows'].forEach((pc) => {
+    const el = document.getElementById('count-' + pc);
+    if (!el) return;
+    const n = fleetData.agents.filter((a) => a.pc === pc).length;
+    el.textContent = n > 0 ? `(${n} agente${n > 1 ? 's' : ''}) ·` : '';
+  });
+}
+
+// Botões globais de expandir/recolher tudo
+function toggleAllHosts(expand) {
+  ['server', 'acer', 'windows'].forEach((pc) => setHostCollapsed(pc, !expand, true));
 }
 
 function refreshAgentModelOptions(agentId, providerId) {
@@ -326,10 +425,12 @@ function refreshAgentReasoningOptions(agentId) {
 function onAgentProviderChange(agentId) {
   const pSel = document.getElementById('sel-provider-' + agentId);
   refreshAgentModelOptions(agentId, pSel.value);
+  updateAgentChip(agentId);
 }
 
 function onAgentModelChange(agentId, selectedModel) {
   refreshAgentReasoningOptions(agentId);
+  updateAgentChip(agentId);
 }
 
 // ==================== CATÁLOGO LOTE (Cascata) ====================
@@ -383,8 +484,16 @@ function explainReasoning(level) {
 function filterAgents(term) {
   const cards = document.querySelectorAll('.agent-card');
   cards.forEach((card) => {
+    const id = card.id.replace('card-', '');
     const text = card.dataset.name || '';
-    card.style.display = text.includes(term) ? 'flex' : 'none';
+    const match = text.includes(term);
+    card.style.display = match ? 'flex' : 'none';
+    // Ao buscar, expande o card que casa para ver os selects direto
+    if (term && match) {
+      setAgentCollapsed(id, false, false);
+      const col = card.closest('.host-column');
+      if (col) setHostCollapsed(col.id.replace('col-', ''), false, false);
+    }
   });
 }
 

@@ -52,6 +52,8 @@
     </div>
     <div class="action-bar-right">
       <input type="text" id="search-input" placeholder="🔍 Filtrar agente ou canal..." class="search-input">
+      <button class="btn-expand-collapse" onclick="toggleAllHosts(false)" title="Recolher todos os PCs (só cabeçalhos)">▸ Recolher tudo</button>
+      <button class="btn-expand-collapse" onclick="toggleAllHosts(true)" title="Expandir todos os PCs">▾ Expandir tudo</button>
     </div>
   </section>
 
@@ -59,9 +61,10 @@
   <main class="fleet-container">
     <!-- Column: Server Desktop -->
     <section class="host-column" id="col-server">
-      <div class="host-header" id="header-server">
+      <div class="host-header collapsible" id="header-server" onclick="toggleHost('server')" role="button" tabindex="0" aria-expanded="true" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHost('server');}">
         <div class="host-title-row">
           <div class="host-name">
+            <span class="collapse-chevron" id="chev-server">▾</span>
             <span class="host-icon">🖥️</span>
             <div>
               <h2>server-desktop</h2>
@@ -73,7 +76,7 @@
           </div>
         </div>
         <div class="host-meta">
-          <span>Gateway: <strong id="gw-server">Ativo</strong></span>
+          <span><span class="host-agent-count" id="count-server">0</span> Gateway: <strong id="gw-server">Ativo</strong></span>
           <div class="host-actions">
             <button class="btn-xs btn-restart" onclick="restartHost('server')" title="Reiniciar Gateway">🔄 Reiniciar</button>
             <button class="btn-xs btn-log" onclick="openLogs('server')" title="Ver Logs do Gateway">📋 Logs</button>
@@ -88,9 +91,10 @@
 
     <!-- Column: Acer Notebook -->
     <section class="host-column" id="col-acer">
-      <div class="host-header" id="header-acer">
+      <div class="host-header collapsible" id="header-acer" onclick="toggleHost('acer')" role="button" tabindex="0" aria-expanded="true" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHost('acer');}">
         <div class="host-title-row">
           <div class="host-name">
+            <span class="collapse-chevron" id="chev-acer">▾</span>
             <span class="host-icon">💻</span>
             <div>
               <h2>acer-Aspire-A515-45</h2>
@@ -102,7 +106,7 @@
           </div>
         </div>
         <div class="host-meta">
-          <span>Gateway: <strong id="gw-acer">Ativo</strong></span>
+          <span><span class="host-agent-count" id="count-acer">0</span> Gateway: <strong id="gw-acer">Ativo</strong></span>
           <div class="host-actions">
             <button class="btn-xs btn-restart" onclick="restartHost('acer')" title="Reiniciar Gateway">🔄 Reiniciar</button>
             <button class="btn-xs btn-log" onclick="openLogs('acer')" title="Ver Logs do Gateway">📋 Logs</button>
@@ -117,9 +121,10 @@
 
     <!-- Column: Windows IMAP -->
     <section class="host-column" id="col-windows">
-      <div class="host-header" id="header-windows">
+      <div class="host-header collapsible" id="header-windows" onclick="toggleHost('windows')" role="button" tabindex="0" aria-expanded="true" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHost('windows');}">
         <div class="host-title-row">
           <div class="host-name">
+            <span class="collapse-chevron" id="chev-windows">▾</span>
             <span class="host-icon">🪟</span>
             <div>
               <h2>PCQUE001IMAP</h2>
@@ -131,7 +136,7 @@
           </div>
         </div>
         <div class="host-meta">
-          <span>Gateway: <strong id="gw-windows">Ativo</strong></span>
+          <span><span class="host-agent-count" id="count-windows">0</span> Gateway: <strong id="gw-windows">Ativo</strong></span>
           <div class="host-actions">
             <button class="btn-xs btn-restart" onclick="restartHost('windows')" title="Reiniciar Gateway">🔄 Reiniciar</button>
             <button class="btn-xs btn-log" onclick="openLogs('windows')" title="Ver Logs do Gateway">📋 Logs</button>

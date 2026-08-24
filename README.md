@@ -114,6 +114,20 @@ celular entra direto pelo `https://modelos.cursar.space`. Validação visual em 
 (Chrome headless) confirmou layout sem overflow horizontal, botões com altura de toque (≥40px) e
 labels de provider/modelo legíveis.
 
+### 🔽 Layout retrátil (accordion — 2026-08-23)
+
+Para não rolar 13 cards abertos no celular, tudo é **retrátil**:
+
+| Elemento | Interação |
+|---|---|
+| Host (server/acer/windows) | Clique no cabeçalho recolhe a coluna; fica o resumo (status, gateway, contador de agentes, botões) |
+| Card de agente | Clique no título recolhe os selects; fica um chip `⚙️ Provider → modelo · reasoning` (atualiza ao vivo) |
+| Global | Botões "▸ Recolher tudo" / "▾ Expandir tudo" na barra de ações |
+| Filtro | Buscar expande automaticamente o card/host que casar; limpando, volta tudo |
+
+O estado recolhido persiste em `localStorage` (`cm-collapsed-hosts`, `cm-collapsed-agents`) —
+ao recarregar, o painel abre como estava. Acessível por teclado (Enter/Espaço, `aria-expanded`).
+
 ## ♻️ Sobrevivência ao reinício (reboot do server)
 
 O painel sobe sozinho após um reboot do server-desktop:

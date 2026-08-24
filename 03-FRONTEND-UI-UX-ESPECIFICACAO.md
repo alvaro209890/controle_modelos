@@ -99,6 +99,23 @@ O front é responsivo (2026-08-23): em ≤ 900px a grade de 3 colunas vira **1 c
 empilham, selects e botões ganham toque maior, o modal de lote abre em **tela cheia na base**
 (60-92vh, bottom-sheet) e o drawer de logs ocupa toda a largura. Em ≤ 420px a tipografia reduz.
 
+### C-M2. Layout Retrátil (accordion, 2026-08-23)
+
+Pensado para celular, funciona igual no desktop:
+
+- **Hosts (PCs) retráteis**: clicar no cabeçalho do host (server-desktop / acer / windows)
+  recolhe a coluna inteira, deixando só o resumo (status, latência, gateway, contador de
+  agentes e botões Reiniciar/Logs/Curar). Seta `▾/▸` indica o estado; acessível via teclado
+  (Enter/Espaço) e `aria-expanded`.
+- **Cards de agente retráteis**: clicar no título do agente recolhe os selects; no lugar fica
+  um **chip resumido** (`⚙️ Provider → modelo · reasoning`) que atualiza em tempo real quando
+  os selects mudam. O botão de copiar ID não propaga o clique (não expande/recolhe).
+- **Botões globais "▸ Recolher tudo" / "▾ Expandir tudo"** na barra de ações.
+- **Persistência**: o estado recolhido fica em `localStorage` (`cm-collapsed-hosts`,
+  `cm-collapsed-agents`) — ao recarregar, o painel volta como estava.
+- **Filtro integra**: buscar um agente no campo de filtro expande automaticamente o card e o
+  host correspondentes para os selects ficarem visíveis; limpando a busca, todos voltam.
+
 ---
 
 ### C2. Modal de Troca de Modelo em Lote (cascata)

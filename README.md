@@ -57,3 +57,19 @@ Esta pasta foi estruturada com planos e especificações detalhadas para que qua
 
 - **Acesso Público/Domínio**: `https://modelos.cursar.space` (ou `https://controle-modelos.cursar.space`)
 - **Acesso Local / Tailscale**: `http://server-desktop:9120` ou `http://localhost:9120`
+
+---
+
+## 🛠️ Robustez (2026-08-23)
+
+- **Cache-bust automático** (`server.js`): o HTML sai com `Cache-Control: no-cache, must-revalidate`
+  e os assets `style.css`/`app.js` recebem `?v=<hash-do-mtime>` calculado em cada request.
+  Sem essas duas camadas o browser (e o Cloudflare Tunnel) seguravam o front antigo e o usuário
+  precisava de Ctrl+F5. Agora basta recarregar a página.
+- **Reinício de Gateway nos 3 PCs** (`services/sshRunner.js`, helper `restartHermesGateway`):
+  - **server**: o processo Node do painel roda como `systemd --user` e não herda o bus do
+    sistema; o helper injeta `XDG_RUNTIME_DIR`/`DBUS_SESSION_BUS_ADDRESS` antes do
+    `systemctl --user restart hermes-gateway.service`.
+  - **windows**: o shell padrão do Windows OpenSSH é PowerShell 5.1, que não suporta `&&`;
+    a cadeia `hermes gateway stop && schtasks /Run /TN HermesGateway` é envolta em `cmd /c "…"`.
+  - **acer**: já funcionava (shell de login via SSH seta o bus); comando mantém-se com o env explícito.

@@ -228,3 +228,22 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Controle Modelos] Acessível via https://modelos.cursar.space`);
 });
 ```
+
+> **Versão atual (2026-08-23):** o trecho acima é a forma base. O `server.js` em produção
+> adiciona um middleware de **cache-bust automático** (antes do `express.static`): todo HTML sai
+> com `Cache-Control: no-cache, must-revalidate` e os links de `style.css`/`app.js` recebem
+> `?v=<hash-do-mtime>` injetado no corpo. O `express.static` usa `{ index: false }` para que o
+> documento só saia pelo middleware (que grava a versão nos assets).
+
+## 6. Reinício de Gateway e Conectividade (`services/sshRunner.js`)
+
+O helper `restartHermesGateway(host)` centraliza o reinício dos três gateways e resolveu duas
+falhas reais (2026-08-23):
+
+| Host | Comando | Problema corrigido |
+|---|---|---|
+| **server** | `systemctl --user restart hermes-gateway.service` | O Node do painel roda como `systemd --user` e **não herda** `DBUS_SESSION_BUS_ADDRESS`/`XDG_RUNTIME_DIR` → `Failed to connect to bus`. O helper injeta os dois (`XDG_RUNTIME_DIR=/run/user/$(id -u) ...`) antes do comando. |
+| **acer** | idem (via SSH) | Já funcionava (shell de login seta o bus); mantém-se com env explícito por consistência. |
+| **windows** | `hermes gateway stop && schtasks /Run /TN HermesGateway` | O shell padrão do **Windows OpenSSH é PowerShell 5.1**, que **não suporta `&&`** → erro de sintaxe. A cadeia é envolta em `cmd /c "…"` para o `cmd.exe` a interpretar. |
+
+Todos os três retornam `{ success: true }` após o restart, validados em produção (2026-08-23).

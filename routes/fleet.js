@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { HOSTS_INFO } = require('../services/agentDirectory');
-const { runOnHost, probeHost } = require('../services/sshRunner');
+const { runOnHost, probeHost, restartHermesGateway } = require('../services/sshRunner');
 const { safeIdentifier, safePc, safeBatchTarget } = require('../services/validation');
 
 /**
@@ -86,18 +86,7 @@ router.post('/restart/:pc', async (req, res) => {
 });
 
 async function restartHostGateway(host) {
-  if (host === 'server') {
-    return runOnHost('server', 'systemctl --user restart hermes-gateway.service');
-  }
-  if (host === 'acer') {
-    return runOnHost('acer', 'systemctl --user restart hermes-gateway.service');
-  }
-  if (host === 'windows') {
-    // Para o processo do gateway e dispara a scheduled task
-    const winCmd = 'hermes gateway stop && schtasks /Run /TN HermesGateway';
-    return runOnHost('windows', winCmd);
-  }
-  return { success: false, error: 'Host desconhecido' };
+  return restartHermesGateway(host);
 }
 
 /**

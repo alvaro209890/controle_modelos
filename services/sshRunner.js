@@ -64,4 +64,38 @@ async function probeHost(host) {
   };
 }
 
-module.exports = { runLocalCommand, runOnHost, probeHost };
+/**
+ * Reinicia o serviço de gateway Hermes em um host.
+ *
+ * Correções de robustez (2026-08-23):
+ *  - server (local): o processo Node do painel roda como systemd --user service e NÃO herda
+ *    DBUS_SESSION_BUS_ADDRESS/XDG_RUNTIME_DIR; sem eles `systemctl --user` falha com
+ *    "Failed to connect to bus". Injeta as variáveis do bus do dono (uid efetivo) antes do comando.
+ *  - windows: o shell padrão do Windows OpenSSH é PowerShell 5.1, que NÃO suporta o operador
+ *    `&&` da cadeia original; a cadeia passa a ser envolta em `cmd /c "..."` para que o `cmd.exe`
+ *    a interprete corretamente.
+ *  - acer: já funcionava (shell de login via SSH seta o bus); mantém o comando, agora com o env
+ *    padrão explícito por consistência.
+ */
+async function restartHermesGateway(host) {
+  if (host === 'server' || host === 'localhost' || host === 'server-desktop') {
+    const busEnv = 'XDG_RUNTIME_DIR=/run/user/$(id -u) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus';
+    return runLocalCommand(`${busEnv} systemctl --user restart hermes-gateway.service`, { timeout: 60000 });
+  }
+
+  if (host === 'acer') {
+    // Shell de login via SSH já injeta o bus; por segurança aponta o XDG_RUNTIME_DIR.
+    const busEnv = 'XDG_RUNTIME_DIR=/run/user/$(id -u) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus';
+    return runOnHost('acer', `${busEnv} systemctl --user restart hermes-gateway.service`, { timeout: 60000 });
+  }
+
+  if (host === 'windows') {
+    // PowerShell 5.1 não entende `&&`; envolve a cadeia em cmd /c.
+    const winCmd = 'cmd /c "hermes gateway stop && schtasks /Run /TN HermesGateway"';
+    return runOnHost('windows', winCmd, { timeout: 60000 });
+  }
+
+  return { success: false, error: 'Host desconhecido' };
+}
+
+module.exports = { runLocalCommand, runOnHost, probeHost, restartHermesGateway };

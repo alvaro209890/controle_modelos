@@ -80,11 +80,25 @@ O catálogo é **hierárquico** (Provider → Model → Reasoning). Atualizado e
 
 | Provider | Chave (PCs) | Modelos |
 |---|---|---|
-| **opencode-go** | `OPENCODE_GO_API_KEY` (3 PCs) | **29 modelos** — todos os que o relay lista: hy3, hy3-preview, ox-alpha-free, glm-5(.1/.2/.3), kimi-k2.5/k2.6/k2.7-code/k3, deepseek-v4-pro/flash/flash-vision-exp, qwen3.5/3.6/3.7 plus e max (3.7/3.8 max), mimo-v2-pro/omni/2.5/2.5-pro, minimax-m2.5/m2.7/m3, gpt-5.6-luna, grok-4.5, muse-spark-1.2-contributor |
+| **opencode-go** | `OPENCODE_GO_API_KEY` (3 PCs) | **29 modelos** — lista **consultada ao vivo no relay** (GET /models, cache 5 min, com fallback em lista embutida). Só `ox-alpha-free` é **GRÁTIS** ($0); os demais exibem custo $/M e contexto de tokens no rótulo/front. |
 | **xai-oauth** | `XAI_API_KEY`/SuperGrok (server, acer) | grok-4.6 |
 | **deepseek-standard** | `DEEPSEEK_API_KEY` (3 PCs) | deepseek-v4-pro, deepseek-v4-flash (API oficial) |
-| **openrouter** | `OPENROUTER_API_KEY` (server, acer) | **8 curados** (bons e baratos p/ código): deepseek-v4-flash, qwen3.7-flash, qwen3-coder-next, gpt-5-nano, hy3, gemini-2.5-flash, claude-haiku-4.5, kimi-k2.5 |
+| **openrouter** | `OPENROUTER_API_KEY` (server, acer) | **8 curados** (bons e baratos p/ código) |
+
+Cada modelo do opencode-go carrega no front: **contexto de tokens** (ex.: `1M`, `262K`) e
+**se é grátis ou o custo** $/M (US$ de entrada/saída), vindos do catálogo oficial do CLI opencode.
+
+> **Atualização automática:** o endpoint `GET /api/models/providers` consulta o relay
+> `opencode.ai/zen/go/v1/models` **ao vivo** (com cache de 5 min). Se a OpenCode adicionar/remover
+> modelos, o painel reflete sozinho em menos de 5 min — sem precisar mexer no código. Se a consulta
+> falhar, cai na lista base embutida (os 29 atuais).
 
 O reasoning de cada modelo é restrito ao que ele realmente aceita (ex.: `ox-alpha-free` → `low|high|max`;
 `glm-5.2` → `high|max`; `hy3` → `none|low|high`; família deepseek → `none..max`), conforme o plugin
 `opencode-zen` do Hermes. No OpenRouter os preços (USD/M tokens) ficam no badge de cada modelo.
+
+## 📱 Mobile
+
+O painel é **responsivo**: em telas ≤ 900px as 3 colunas viram 1, cards empilhados, toques maiores
+(botões/selects ampliados), modal em tela cheia na base e drawer de logs em largura total. Teste no
+celular entra direto pelo `https://modelos.cursar.space`.

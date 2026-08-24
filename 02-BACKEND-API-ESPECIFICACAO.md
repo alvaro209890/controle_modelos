@@ -56,9 +56,17 @@ Provider (id, name, baseUrl, keyEnv, availableOn)  →  Model (id, name, allowed
 - **`allowedReasoning`** — níveis de reasoning aceitos por aquele modelo específico (ex.: `ox-alpha-free` só aceita `low`/`high`/`max`; `glm-5.2` só `high`/`max`; `hy3` só `none`/`low`/`high`; família deepseek aceita `none`..`max`).
 - **`defaultReasoning`** — o nível padrão sugerido ao trocar para aquele modelo.
 
-O `opencode-go` lista **29 modelos** (validados 1:1 contra `GET /models` do relay em 2026-08-23);
-o `openrouter` lista uma **curadoria de 8 modelos bons e baratos para código** (com preço USD/M tokens
-no badge). Espera-se que mudanças no catálogo do relay se reflitam no `routes/models.js`.
+O `opencode-go` lista **29 modelos** e o catálogo é **atualizado automaticamente**: o endpoint
+`GET /api/models/providers` consulta o relay `opencode.ai/zen/go/v1/models?full=true` **ao vivo**
+(com cache de 5 min) usando a `OPENCODE_GO_API_KEY` do `.env` do Hermes do host. Modelos novos
+aparecem sozinhos; se a consulta falhar, cai na lista base embutida em `baseGoIds()`. A validação
+de escrita (`findModelPreset`, síncrona) usa o catálogo base (não depende de rede). Cada modelo traz
+`contextLength` (contexto em tokens), `free` (bool) e `costInput`/`costOutput` ($/M) vindos do
+catálogo oficial do CLI opencode. O `openrouter` lista uma **curadoria de 8 modelos bons e baratos
+para código** (com preço USD/M tokens no badge). Espera-se que mudanças no catálogo do relay se
+reflitam em <5 min sem mexer no código.
+
+> **Mobile:** front responsivo (≤900px → 1 coluna, toques maiores). Veja `README.md`.
 
 ### Endpoints
 

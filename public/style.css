@@ -719,3 +719,91 @@ body {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+/* ================= OTIMIZAÇÃO MOBILE (2026-08-23) =================
+   Tornar o painel plenamente utilizável no celular:
+   - 1 coluna, cards empilhados, toques maiores */
+@media (max-width: 900px) {
+  .fleet-container {
+    grid-template-columns: 1fr;
+    padding: 0.85rem;
+    gap: 1rem;
+  }
+  .topbar {
+    padding: 0.75rem 1rem;
+  }
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .action-bar {
+    padding: 0.7rem 1rem;
+  }
+  .search-input {
+    min-width: 100%;
+    width: 100%;
+  }
+  .agent-selectors,
+  .agent-selectors-3col {
+    grid-template-columns: 1fr;
+  }
+  .agent-selectors-3col .selector-group:nth-child(3) {
+    grid-column: auto;
+  }
+  .form-control {
+    padding: 0.6rem 0.7rem;
+    font-size: 0.9rem;
+  }
+  .selector-group label {
+    font-size: 0.75rem;
+  }
+  .btn {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+  }
+  .btn-xs {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.8rem;
+  }
+  .agent-card {
+    padding: 1rem;
+  }
+  .modal-card {
+    width: 100%;
+    max-width: 100%;
+    min-height: 60vh;
+    max-height: 92vh;
+    margin: 0;
+    border-radius: 0;
+  }
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-body {
+    padding: 1.1rem;
+  }
+  .drawer-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  .fleet-summary {
+    flex-wrap: wrap;
+  }
+  .host-actions {
+    flex-wrap: wrap;
+  }
+  .agent-card-actions {
+    gap: 0.5rem;
+  }
+}
+
+/* Telas muito pequenas: reduz spawn, botões de ação em linha cheia */
+@media (max-width: 420px) {
+  body { font-size: 15px; }
+  .brand h1 { font-size: 1.05rem; }
+  .brand-sub { font-size: 0.68rem; }
+  .stat-pill { font-size: 0.72rem; }
+  .domain-badge { font-size: 0.7rem; }
+  .agent-channel-title { font-size: 0.85rem; }
+}

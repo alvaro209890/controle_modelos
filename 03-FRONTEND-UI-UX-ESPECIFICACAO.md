@@ -84,12 +84,20 @@ Este documento detalha o design, os componentes visuais, os fluxos de interaçã
 - **Emoji e Canal do Discord** (`🌲｜geoforest`, `📋｜trello-simcar`, etc.) + ID do canal.
 - **Cascata de Seletores (Provider → Model → Reasoning)**, alinhada ao catálogo hierárquico:
   1. **Provider**: dropdown com os provedores que têm credencial naquele PC (`availableOn`). Ex.: no Windows só aparecem `opencode-go` e `deepseek-standard` (o `xai-oauth` não está disponível lá).
-  2. **Modelo**: ao trocar o provider, o dropdown de modelos é repovoado com **apenas os modelos daquele provider**. O `opencode-go` lista **29 modelos** (todos os do relay); o `openrouter` lista os **8 curados** (bons e baratos para código).
+  2. **Modelo**: ao trocar o provider, o dropdown de modelos é repovoado com **apenas os modelos daquele provider**. O `opencode-go` lista **29 modelos** (todos os do relay); o `openrouter` lista os **8 curados** (bons e baratos para código). Cada label de modelo exibe o **contexto** (`1M`/`262K`) e o selo **⭐GRÁTIS** quando free; o tooltip do select mostra o custo $/M.
   3. **Reasoning**: ao escolher o modelo, o dropdown de reasoning é repovoado com **apenas os níveis aceitos por aquele modelo** (`allowedReasoning`), já marcando o `defaultReasoning`.
 - Em cada card o estado atual do agente é reconstruído: se o modelo ativo não estiver em nenhum provider homologado, é exibido como opção `(custom)`; se o reasoning ativo não estiver na lista do modelo, é exibido como `(atual)`.
 - **Botões "Salvar" e "Testar Conexão"**:
   - "Salvar" gera backup e atualiza o YAML.
   - "Testar Conexão" roda `testar-provider-perfil.py` e exibe o retorno ao vivo.
+
+---
+
+### C-M. Responsividade Mobile
+
+O front é responsivo (2026-08-23): em ≤ 900px a grade de 3 colunas vira **1 coluna**, os cards
+empilham, selects e botões ganham toque maior, o modal de lote abre em **tela cheia na base**
+(60-92vh, bottom-sheet) e o drawer de logs ocupa toda a largura. Em ≤ 420px a tipografia reduz.
 
 ---
 

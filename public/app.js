@@ -154,11 +154,48 @@ function providerOptionsForPC(pc) {
     .join('');
 }
 
+// Helper: formata contexto para exibição (ex.: 1M, 262K, 105M -> 1.05M)
+function fmtCtx(ctx) {
+  if (!ctx) return '';
+  if (ctx >= 1000000) {
+    const v = ctx / 1000000;
+    return (v >= 10 ? Math.round(v) : v % 1 === 0 ? v : v.toFixed(2)) + 'M';
+  }
+  return Math.round(ctx / 1000) + 'K';
+}
+
+// Rótulo compacto de modelo: nome + (ctx) + indicador free/custo
+function modelLabel(m) {
+  let s = m.name;
+  if (m.contextLength) s += ` · ${fmtCtx(m.contextLength)}`;
+  if (m.free) s += ' · ⭐GRÁTIS';
+  return s;
+}
+
+// Rótulo de reasoning com dica do contexto do modelo
+function reasonHintLevel(modelId) {
+  const p = findModelPresetLocal(modelId);
+  if (!p) return '';
+  const bits = [];
+  if (p.free) bits.push('⭐ GRÁTIS');
+  if (p.contextLength) bits.push('ctx ' + fmtCtx(p.contextLength));
+  if (p.costInput != null && !p.free) bits.push('US$' + fmtCost(p.costInput) + '/M in');
+  return bits.length ? ' · ' + bits.join(' · ') : '';
+}
+
+function fmtCost(v) {
+  if (v == null) return '';
+  return v >= 0.1 ? String(v) : v >= 0.01 ? String(v) : String(Math.round(v * 10000) / 10000);
+}
+
 // Modelos de um provider (filtrados por PC, se informado)
 function modelOptionsForProvider(providerId, pc) {
   const p = fleetData.providers.find((pp) => pp.id === providerId);
   if (!p) return '';
-  return p.models.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
+  return p.models.map((m) => {
+    const label = modelLabel(m).replace(/'/g, "\\'");
+    return `<option value="${m.id}">${label}</option>`;
+  }).join('');
 }
 
 function renderAgentsByHost(pc) {
@@ -269,10 +306,21 @@ function refreshAgentReasoningOptions(agentId) {
   const preset = findModelPresetLocal(mSel.value);
   if (!preset) {
     rSel.innerHTML = '<option value="">Selecione o modelo...</option>';
+    rSel.title = '';
     return;
   }
   rSel.innerHTML = preset.allowedReasoning.map((lvl) => `<option value="${lvl}">${lvl}</option>`).join('');
   rSel.value = preset.defaultReasoning;
+  // tooltip com contexto/custo próximo ao seletor de modelo
+  const pSel = document.getElementById('sel-provider-' + agentId);
+  const info = [];
+  if (preset.free) info.push('⭐ GRÁTIS');
+  if (preset.contextLength) info.push('ctx ' + fmtCtx(preset.contextLength));
+  if (preset.costInput != null && !preset.free) info.push('US$' + fmtCost(preset.costInput) + '/M in');
+  if (info.length) {
+    mSel.title = mSel.value + ' — ' + info.join(' • ');
+    if (pSel) pSel.title = pSel.value;
+  }
 }
 
 function onAgentProviderChange(agentId) {
@@ -318,7 +366,7 @@ function onBatchModelChange(modelId) {
   if (!preset) return;
   rSel.innerHTML = preset.allowedReasoning.map((lvl) => `<option value="${lvl}">${lvl}${explainReasoning(lvl)}</option>`).join('');
   rSel.value = preset.defaultReasoning;
-  if (hint) hint.textContent = '⚠️ Níveis aceitos por ' + modelId + ': ' + preset.allowedReasoning.join(', ') + '.';
+  if (hint) hint.textContent = '⚠️ Níveis aceitos por ' + modelId + ': ' + preset.allowedReasoning.join(', ') + reasonHintLevel(modelId) + '.';
 }
 
 function explainReasoning(level) {

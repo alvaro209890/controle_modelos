@@ -28,12 +28,14 @@
 
     <div class="topbar-right">
       <div id="fleet-summary" class="fleet-summary">
-        <span class="stat-pill"><strong id="stat-online-hosts">3/3</strong> PCs Online</span>
-        <span class="stat-pill"><strong id="stat-agents-count">13</strong> Agentes Ativos</span>
+        <span class="stat-pill"><strong id="stat-online-hosts">—</strong> PCs Online</span>
+        <span class="stat-pill"><strong id="stat-agents-count">—</strong> Agentes</span>
+        <span class="stat-pill stat-pending hidden" title="Agentes com config gravado mas gateway ainda não reiniciado"><strong id="stat-pending">0</strong> pendentes</span>
       </div>
       <button id="btn-refresh" class="btn btn-secondary" title="Recarregar status e configurações">
         <span class="icon">🔄</span> Atualizar
       </button>
+      <span id="last-update" class="last-update"></span>
     </div>
   </header>
 
@@ -51,6 +53,10 @@
       </button>
     </div>
     <div class="action-bar-right">
+      <label class="switch-inline" title="O Hermes só lê o config.yaml quando o gateway sobe. Sem reiniciar, a troca de modelo fica só no arquivo.">
+        <input type="checkbox" id="opt-auto-restart" checked>
+        <span>Reiniciar gateway ao salvar</span>
+      </label>
       <input type="text" id="search-input" placeholder="🔍 Filtrar agente ou canal..." class="search-input">
       <button class="btn-expand-collapse" onclick="toggleAllHosts(false)" title="Recolher todos os PCs (só cabeçalhos)">▸ Recolher tudo</button>
       <button class="btn-expand-collapse" onclick="toggleAllHosts(true)" title="Expandir todos os PCs">▾ Expandir tudo</button>
@@ -72,11 +78,11 @@
             </div>
           </div>
           <div class="host-status-badge" id="status-badge-server">
-            <span class="dot dot-online"></span> Online
+            <span class="dot dot-unknown"></span> verificando…
           </div>
         </div>
         <div class="host-meta">
-          <span><span class="host-agent-count" id="count-server">0</span> Gateway: <strong id="gw-server">Ativo</strong></span>
+          <span><span class="host-agent-count" id="count-server">0</span> Gateway: <strong id="gw-server">—</strong></span>
           <div class="host-actions">
             <button class="btn-xs btn-restart" onclick="restartHost('server')" title="Reiniciar Gateway">🔄 Reiniciar</button>
             <button class="btn-xs btn-log" onclick="openLogs('server')" title="Ver Logs do Gateway">📋 Logs</button>
@@ -102,11 +108,11 @@
             </div>
           </div>
           <div class="host-status-badge" id="status-badge-acer">
-            <span class="dot dot-online"></span> Online
+            <span class="dot dot-unknown"></span> verificando…
           </div>
         </div>
         <div class="host-meta">
-          <span><span class="host-agent-count" id="count-acer">0</span> Gateway: <strong id="gw-acer">Ativo</strong></span>
+          <span><span class="host-agent-count" id="count-acer">0</span> Gateway: <strong id="gw-acer">—</strong></span>
           <div class="host-actions">
             <button class="btn-xs btn-restart" onclick="restartHost('acer')" title="Reiniciar Gateway">🔄 Reiniciar</button>
             <button class="btn-xs btn-log" onclick="openLogs('acer')" title="Ver Logs do Gateway">📋 Logs</button>
@@ -132,11 +138,11 @@
             </div>
           </div>
           <div class="host-status-badge" id="status-badge-windows">
-            <span class="dot dot-online"></span> Online
+            <span class="dot dot-unknown"></span> verificando…
           </div>
         </div>
         <div class="host-meta">
-          <span><span class="host-agent-count" id="count-windows">0</span> Gateway: <strong id="gw-windows">Ativo</strong></span>
+          <span><span class="host-agent-count" id="count-windows">0</span> Gateway: <strong id="gw-windows">—</strong></span>
           <div class="host-actions">
             <button class="btn-xs btn-restart" onclick="restartHost('windows')" title="Reiniciar Gateway">🔄 Reiniciar</button>
             <button class="btn-xs btn-log" onclick="openLogs('windows')" title="Ver Logs do Gateway">📋 Logs</button>
@@ -166,6 +172,7 @@
             <option value="acer">💻 Apenas acer (5 agentes)</option>
             <option value="windows">🪟 Apenas windows (4 agentes)</option>
           </select>
+          <small class="form-warning hidden" id="batch-target-warning"></small>
         </div>
 
         <div class="form-group">
@@ -196,6 +203,7 @@
             <input type="checkbox" id="batch-auto-restart" checked>
             Reiniciar os gateways afetados automaticamente após aplicar
           </label>
+          <small class="form-hint">Sem o reinício, o Hermes segue com o modelo antigo em memória: a troca fica gravada mas não entra em vigor.</small>
         </div>
       </div>
       <div class="modal-footer">

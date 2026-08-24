@@ -986,3 +986,225 @@ body {
   .domain-badge { font-size: 0.7rem; }
   .agent-channel-title { font-size: 0.85rem; }
 }
+
+/* ================= APLICAR / PENDÊNCIA / ESTADOS (2026-08-24) =================
+   O painel gravava o config.yaml e dizia "sucesso", mas o Hermes só lê o arquivo
+   quando o gateway sobe — o Álvaro trocava o modelo e nada mudava. Estes estilos
+   dão nome ao que está acontecendo: o que está GRAVADO, o que está PENDENTE de
+   reinício e o que está apenas selecionado na tela (não salvo). */
+
+/* `.hidden` genérico. Faltava: o JS marcava `hidden` no spinner e na caixa de resultado do
+   modal de teste, mas sem regra correspondente os dois ficavam visíveis ao mesmo tempo —
+   o painel mostrava "Executando..." junto com a saída já pronta. */
+.hidden {
+  display: none !important;
+}
+
+.dot-unknown {
+  background-color: var(--text-dim);
+  box-shadow: 0 0 6px rgba(100, 116, 139, 0.6);
+}
+
+.stat-pill.stat-pending {
+  background-color: var(--warning-bg);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+
+.stat-pill.hidden,
+.form-warning.hidden {
+  display: none;
+}
+
+.last-update {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.switch-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+  user-select: none;
+  min-height: 38px;
+}
+
+.switch-inline:hover {
+  border-color: var(--border-focus);
+  color: var(--text-main);
+}
+
+.switch-inline input {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Faixas de estado dentro do card */
+.agent-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  margin-bottom: 0.55rem;
+  border: 1px solid transparent;
+}
+
+.agent-alert code {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.alert-error {
+  background-color: var(--danger-bg);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.alert-warn {
+  background-color: var(--warning-bg);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+
+.alert-pending {
+  background-color: var(--warning-bg);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fde68a;
+  justify-content: space-between;
+}
+
+.btn-xs.btn-apply {
+  background-color: var(--warning);
+  color: #1f1300;
+  border-color: transparent;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.btn-xs.btn-apply:hover {
+  background-color: #fbbf24;
+}
+
+/* Linha "o que está no arquivo agora" */
+.agent-saved-line {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-bottom: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.agent-saved-line code {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.72rem;
+}
+
+.unsaved-flag {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.unsaved-flag.hidden {
+  display: none;
+}
+
+/* Card com alteração ainda não salva */
+.agent-card.dirty {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+.agent-card.dirty .btn-save {
+  background-color: var(--warning);
+  color: #1f1300;
+}
+
+/* Filtro de busca */
+.agent-card.filtered-out {
+  display: none;
+}
+
+.host-column.no-match {
+  display: none;
+}
+
+.agents-empty {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.form-warning {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #fcd34d;
+}
+
+/* Carregando */
+body.is-loading .fleet-container {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.btn-xs:disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Toast clicável para dispensar */
+.toast {
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .action-bar-right {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+  .switch-inline {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 42px;
+    font-size: 0.85rem;
+  }
+  .last-update {
+    width: 100%;
+    text-align: right;
+  }
+  .alert-pending {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .alert-pending .btn-xs.btn-apply {
+    width: 100%;
+  }
+  .agent-alert {
+    font-size: 0.8rem;
+  }
+}

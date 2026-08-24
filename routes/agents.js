@@ -2,11 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { FLEET_AGENTS } = require('../services/agentDirectory');
 const { readRawConfig, writeRawConfig, parseAgentConfig, applyModelChangesToYaml } = require('../services/configManager');
-const { findModelPreset } = require('./models');
-const { safeIdentifier, safeModel, safeReasoning, safeBaseUrl, safePc, safeBatchTarget } = require('../services/validation');
+const { findModelPreset, findProviderById } = require('./models');
+const { restartHermesGateway } = require('../services/sshRunner');
+const panelState = require('../services/panelState');
+const { probeHostRuntime, invalidate: invalidateRuntime } = require('../services/runtimeProbe');
+const { safeIdentifier, safeModel, safeReasoning, safeBaseUrl, safePc, safeBatchTarget, safeBool } = require('../services/validation');
 
-function resolveModelDefaults(model, reasoningEffort) {
-  const preset = findModelPreset(model);
+// Envolve handler async: sem isso, uma exceção dentro de um `await` some no Express 4 e a
+// requisição fica pendurada até o navegador desistir.
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+function resolveModelDefaults(model, reasoningEffort, providerHint) {
+  const preset = findModelPreset(model, providerHint);
   const effort = reasoningEffort || (preset ? preset.defaultReasoning : 'max');
   if (preset && !preset.allowedReasoning.includes(effort)) {
     return { error: 'O modelo "' + model + '" aceita apenas: ' + preset.allowedReasoning.join(', ') + '.' };
@@ -21,53 +28,173 @@ function resolveModelDefaults(model, reasoningEffort) {
 
 // Valida a coerência entre provider e modelo se ambos forem informados
 function validateProviderModel(provider, model) {
-  const preset = findModelPreset(model);
-  if (!preset || !provider) return null; // sem preset ou provider livre, deixa passar
-  if (preset.provider !== provider) {
-    return 'O modelo "' + model + '" pertence ao provedor "' + preset.provider + '", não a "' + provider + '".';
+  if (!provider) return null;
+  const providerDef = findProviderById(provider);
+  if (!providerDef) return null; // provider fora do catálogo: passa (config manual)
+  if (!providerDef.models.some((m) => m.id === model)) {
+    const owner = findModelPreset(model);
+    return owner
+      ? 'O modelo "' + model + '" pertence ao provedor "' + owner.provider + '", não a "' + provider + '".'
+      : 'O provedor "' + provider + '" não oferece o modelo "' + model + '".';
   }
   return null;
+}
+
+/**
+ * Lê o corpo comum dos endpoints de troca de modelo e devolve os valores já validados.
+ */
+function readModelPayload(body) {
+  const model = safeModel(body.model);
+  if (!model) {
+    return { error: 'O parâmetro "model" é obrigatório e inválido.' };
+  }
+
+  let providerHint = null;
+  if (body.provider !== undefined && body.provider !== null && body.provider !== '') {
+    providerHint = safeIdentifier(body.provider);
+    if (!providerHint) return { error: 'Provider inválido.' };
+  }
+
+  let reasoningEffort = null;
+  if (body.reasoningEffort !== undefined && body.reasoningEffort !== null && body.reasoningEffort !== '') {
+    reasoningEffort = safeReasoning(body.reasoningEffort);
+    if (!reasoningEffort) {
+      return { error: 'Nível de reasoning inválido. Use: none, low, medium, high, max.' };
+    }
+  }
+
+  const defaults = resolveModelDefaults(model, reasoningEffort, providerHint);
+  if (defaults.error) return { error: defaults.error };
+
+  const provider = providerHint || defaults.provider;
+
+  const providerModelErr = validateProviderModel(provider, model);
+  if (providerModelErr) return { error: providerModelErr };
+
+  let baseUrl = defaults.baseUrl;
+  if (body.baseUrl !== undefined && body.baseUrl !== null && body.baseUrl !== '') {
+    baseUrl = safeBaseUrl(body.baseUrl);
+    if (!baseUrl) return { error: 'Base URL inválida.' };
+  }
+  // Se o provider veio explícito e a baseUrl não, usa a do provider escolhido
+  if (providerHint && (body.baseUrl === undefined || body.baseUrl === null || body.baseUrl === '')) {
+    const pd = findProviderById(providerHint);
+    if (pd) baseUrl = pd.baseUrl;
+  }
+
+  return {
+    model,
+    provider,
+    baseUrl,
+    reasoningEffort: defaults.reasoningEffort,
+    preset: defaults.preset,
+    restart: safeBool(body.restart, false)
+  };
+}
+
+/**
+ * Aplica a mudança em um agente: lê, edita, confere e grava.
+ */
+async function applyToAgent(agent, payload) {
+  const readRes = await readRawConfig(agent.pc, agent.configPath);
+  if (!readRes.success) {
+    return { success: false, error: 'Falha ao ler configuração: ' + readRes.error };
+  }
+
+  const parsedOld = parseAgentConfig(readRes.content);
+  const previousModel = parsedOld.success ? parsedOld.data.model : null;
+
+  const result = applyModelChangesToYaml(readRes.content, {
+    model: payload.model,
+    provider: payload.provider,
+    baseUrl: payload.baseUrl,
+    reasoningEffort: payload.reasoningEffort,
+    previousModel
+  });
+
+  // Nada de gravar um arquivo que não ficou com o que foi pedido — antes o painel respondia
+  // "sucesso" mesmo quando o YAML saía intacto (chave ausente no arquivo).
+  if (!result.ok || !result.content) {
+    return { success: false, error: 'A edição do YAML não produziu o resultado esperado: ' + result.warnings.join('; ') };
+  }
+
+  if (!result.changed) {
+    return { success: true, unchanged: true, previousModel, backupPath: null, inserted: [] };
+  }
+
+  const writeRes = await writeRawConfig(agent.pc, agent.configPath, result.content);
+  if (!writeRes.success) {
+    return { success: false, error: 'Falha ao gravar arquivo: ' + writeRes.error };
+  }
+
+  panelState.markWritten(agent.id);
+  invalidateRuntime(agent.pc);
+  return { success: true, unchanged: false, previousModel, backupPath: writeRes.backupPath, inserted: result.inserted };
 }
 
 /**
  * GET /api/agents
  * Retorna os 13 agentes com seus dados de configuração lidos em tempo real
  */
-router.get('/', async (req, res) => {
+router.get('/', wrap(async (req, res) => {
+  // Uma sondagem por host: quando o gateway subiu + mtime de cada config.yaml.
+  const pcs = [...new Set(FLEET_AGENTS.map((a) => a.pc))];
+  const runtimeByPc = {};
+  await Promise.all(pcs.map(async (pc) => {
+    const paths = FLEET_AGENTS.filter((a) => a.pc === pc).map((a) => a.configPath);
+    runtimeByPc[pc] = await probeHostRuntime(pc, paths);
+  }));
+
   const results = await Promise.all(
     FLEET_AGENTS.map(async (agent) => {
+      const rt = runtimeByPc[agent.pc] || { gatewayStartedAt: null, mtimes: {} };
+      const configMtime = rt.mtimes[agent.configPath] || null;
+      // Pendente = arquivo mais novo que o processo em execução. O carimbo do próprio painel
+      // (`panelState`) cobre o caso em que não dá para ler o horário de subida do gateway.
+      const staleProcess = !!(configMtime && rt.gatewayStartedAt && configMtime > rt.gatewayStartedAt);
+      const base = {
+        ...agent,
+        pendingRestart: staleProcess || panelState.isPendingRestart(agent.id, agent.pc),
+        configMtime,
+        gatewayStartedAt: rt.gatewayStartedAt,
+        lastWriteAt: panelState.getWrittenAt(agent.id) || configMtime,
+        lastRestartAt: panelState.getRestartedAt(agent.pc) || rt.gatewayStartedAt
+      };
+
       const readRes = await readRawConfig(agent.pc, agent.configPath);
       if (!readRes.success) {
         return {
-          ...agent,
+          ...base,
           online: false,
           error: readRes.error,
-          model: 'indisponível',
-          provider: 'indisponível',
+          model: null,
+          provider: null,
           baseUrl: '',
-          reasoningEffort: 'n/d',
+          reasoningEffort: null,
           reasoningOverrides: {},
-          delegation: {}
+          delegation: {},
+          missing: []
         };
       }
 
       const parsed = parseAgentConfig(readRes.content);
       if (!parsed.success) {
         return {
-          ...agent,
+          ...base,
           online: true,
           error: 'Erro de parse YAML: ' + parsed.error,
-          model: 'indisponível',
-          provider: 'indisponível',
+          model: null,
+          provider: null,
           baseUrl: '',
-          reasoningEffort: 'n/d',
+          reasoningEffort: null,
           reasoningOverrides: {},
-          delegation: {}
+          delegation: {},
+          missing: []
         };
       }
 
       return {
-        ...agent,
+        ...base,
         online: true,
         error: null,
         model: parsed.data.model,
@@ -76,19 +203,21 @@ router.get('/', async (req, res) => {
         reasoningEffort: parsed.data.reasoningEffort,
         reasoningOverrides: parsed.data.reasoningOverrides,
         delegation: parsed.data.delegation,
-        maxTurns: parsed.data.maxTurns
+        maxTurns: parsed.data.maxTurns,
+        missing: parsed.data.missing
       };
     })
   );
 
   res.json({ success: true, count: results.length, agents: results });
-});
+}));
 
 /**
  * POST /api/agents/:pc/:profile/model
- * Atualiza o modelo de um único agente
+ * Atualiza o modelo de um único agente. Com `restart: true`, reinicia o gateway do host —
+ * o Hermes só lê o config.yaml na subida, então SEM reinício a troca fica só no arquivo.
  */
-router.post('/:pc/:profile/model', async (req, res) => {
+router.post('/:pc/:profile/model', wrap(async (req, res) => {
   const pc = safePc(req.params.pc);
   const profile = safeIdentifier(req.params.profile);
 
@@ -96,41 +225,16 @@ router.post('/:pc/:profile/model', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Parâmetros "pc" ou "profile" inválidos.' });
   }
 
-  const model = safeModel(req.body.model);
-  if (!model) {
-    return res.status(400).json({ success: false, error: 'O parâmetro "model" é obrigatório e inválido.' });
+  const payload = readModelPayload(req.body || {});
+  if (payload.error) {
+    return res.status(400).json({ success: false, error: payload.error });
   }
 
-  let reasoningEffort = null;
-  if (req.body.reasoningEffort !== undefined && req.body.reasoningEffort !== null && req.body.reasoningEffort !== '') {
-    reasoningEffort = safeReasoning(req.body.reasoningEffort);
-    if (!reasoningEffort) {
-      return res.status(400).json({ success: false, error: 'Nível de reasoning inválido. Use: none, low, medium, high, max.' });
-    }
-  }
-
-  const defaults = resolveModelDefaults(model, reasoningEffort);
-  if (defaults.error) {
-    return res.status(400).json({ success: false, error: defaults.error });
-  }
-  reasoningEffort = defaults.reasoningEffort;
-
-  let provider = defaults.provider;
-  if (req.body.provider !== undefined && req.body.provider !== null && req.body.provider !== '') {
-    provider = safeIdentifier(req.body.provider);
-    if (!provider) return res.status(400).json({ success: false, error: 'Provider inválido.' });
-  }
-
-  // Coerência provider <-> modelo
-  const providerModelErr = validateProviderModel(provider, model);
-  if (providerModelErr) {
-    return res.status(400).json({ success: false, error: providerModelErr });
-  }
-
-  let baseUrl = defaults.baseUrl;
-  if (req.body.baseUrl !== undefined && req.body.baseUrl !== null && req.body.baseUrl !== '') {
-    baseUrl = safeBaseUrl(req.body.baseUrl);
-    if (!baseUrl) return res.status(400).json({ success: false, error: 'Base URL inválida.' });
+  if (payload.preset && payload.preset.availableOn && !payload.preset.availableOn.includes(pc)) {
+    return res.status(400).json({
+      success: false,
+      error: 'O provedor "' + payload.preset.provider + '" não tem credencial (' + payload.preset.keyEnv + ') no PC "' + pc + '".'
+    });
   }
 
   const agent = FLEET_AGENTS.find((a) => a.pc === pc && a.profile === profile);
@@ -138,105 +242,70 @@ router.post('/:pc/:profile/model', async (req, res) => {
     return res.status(404).json({ success: false, error: 'Agente não encontrado: ' + pc + ' / ' + profile });
   }
 
-  // Lê o config atual
-  const readRes = await readRawConfig(agent.pc, agent.configPath);
-  if (!readRes.success) {
-    return res.status(500).json({ success: false, error: 'Falha ao ler configuração: ' + readRes.error });
+  const applied = await applyToAgent(agent, payload);
+  if (!applied.success) {
+    return res.status(500).json({ success: false, error: applied.error });
   }
 
-  const parsedOld = parseAgentConfig(readRes.content);
-  const previousModel = parsedOld.success ? parsedOld.data.model : null;
-
-  // Aplica as alterações no YAML
-  const newContent = applyModelChangesToYaml(readRes.content, {
-    model,
-    provider,
-    baseUrl,
-    reasoningEffort,
-    previousModel
-  });
-
-  // Grava com backup
-  const writeRes = await writeRawConfig(agent.pc, agent.configPath, newContent);
-  if (!writeRes.success) {
-    return res.status(500).json({ success: false, error: 'Falha ao gravar arquivo: ' + writeRes.error });
+  let restart = null;
+  if (payload.restart) {
+    const r = await restartHermesGateway(agent.pc);
+    if (r.success) panelState.markRestarted(agent.pc);
+    invalidateRuntime(agent.pc);
+    restart = { requested: true, success: !!r.success, output: r.stdout || r.stderr || r.error || '' };
   }
+
+  const pending = panelState.isPendingRestart(agent.id, agent.pc);
+  const baseMsg = applied.unchanged
+    ? 'Configuração já estava em "' + payload.model + '" (' + payload.reasoningEffort + ') no agente ' + agent.name
+    : 'Modelo gravado como "' + payload.model + '" (' + payload.reasoningEffort + ') no agente ' + agent.name;
+  const tail = restart
+    ? (restart.success ? ' — gateway reiniciado, já em vigor.' : ' — ATENÇÃO: o reinício do gateway falhou, a troca ainda não está em vigor.')
+    : (pending ? ' — reinicie o gateway de ' + agent.pc + ' para entrar em vigor.' : '');
 
   res.json({
     success: true,
-    message: 'Modelo atualizado com sucesso para "' + model + '" (' + reasoningEffort + ') no agente ' + agent.name,
+    message: baseMsg + tail,
     agent: agent.id,
-    backupPath: writeRes.backupPath
+    previousModel: applied.previousModel,
+    unchanged: applied.unchanged,
+    insertedKeys: applied.inserted,
+    backupPath: applied.backupPath,
+    restart,
+    pendingRestart: pending
   });
-});
+}));
 
 /**
  * POST /api/agents/batch
  * Atualiza o modelo em lote por computador ou em toda a frota
  */
-router.post('/batch', async (req, res) => {
-  const model = safeModel(req.body.model);
-  if (!model) {
-    return res.status(400).json({ success: false, error: 'O parâmetro "model" é obrigatório e inválido.' });
-  }
-
+router.post('/batch', wrap(async (req, res) => {
   const target = safeBatchTarget(req.body.target);
   if (!target) {
     return res.status(400).json({ success: false, error: 'Alvo inválido. Use: all, server, acer ou windows.' });
   }
 
-  let reasoningEffort = null;
-  if (req.body.reasoningEffort !== undefined && req.body.reasoningEffort !== null && req.body.reasoningEffort !== '') {
-    reasoningEffort = safeReasoning(req.body.reasoningEffort);
-    if (!reasoningEffort) {
-      return res.status(400).json({ success: false, error: 'Nível de reasoning inválido. Use: none, low, medium, high, max.' });
-    }
+  const payload = readModelPayload(req.body || {});
+  if (payload.error) {
+    return res.status(400).json({ success: false, error: payload.error });
   }
 
-  const defaults = resolveModelDefaults(model, reasoningEffort);
-  if (defaults.error) {
-    return res.status(400).json({ success: false, error: defaults.error });
+  const targetsToUpdate = FLEET_AGENTS.filter((a) => (target === 'all' ? true : a.pc === target));
+  if (targetsToUpdate.length === 0) {
+    return res.status(404).json({ success: false, error: 'Nenhum agente encontrado para o alvo especificado.' });
   }
-  reasoningEffort = defaults.reasoningEffort;
-
-  let provider = defaults.provider;
-  if (req.body.provider !== undefined && req.body.provider !== null && req.body.provider !== '') {
-    provider = safeIdentifier(req.body.provider);
-    if (!provider) return res.status(400).json({ success: false, error: 'Provider inválido.' });
-  }
-
-  // Coerência provider <-> modelo
-  const providerModelErr = validateProviderModel(provider, model);
-  if (providerModelErr) {
-    return res.status(400).json({ success: false, error: providerModelErr });
-  }
-
-  let baseUrl = defaults.baseUrl;
-  if (req.body.baseUrl !== undefined && req.body.baseUrl !== null && req.body.baseUrl !== '') {
-    baseUrl = safeBaseUrl(req.body.baseUrl);
-    if (!baseUrl) return res.status(400).json({ success: false, error: 'Base URL inválida.' });
-  }
-
-  const targetsToUpdate = FLEET_AGENTS.filter((a) => {
-    if (target === 'all') return true;
-    return a.pc === target;
-  });
 
   // Se o alvo inclui um PC sem a chave do provedor, impede a operação
-  const preset = findModelPreset(model);
-  const affectedPCs = new Set(targetsToUpdate.map((a) => a.pc));
-  if (preset && preset.availableOn) {
-    const missingPCs = [...affectedPCs].filter((pc) => !preset.availableOn.includes(pc));
+  const affectedPCs = [...new Set(targetsToUpdate.map((a) => a.pc))];
+  if (payload.preset && payload.preset.availableOn) {
+    const missingPCs = affectedPCs.filter((pc) => !payload.preset.availableOn.includes(pc));
     if (missingPCs.length > 0) {
       return res.status(400).json({
         success: false,
-        error: 'O provedor "' + preset.provider + '" não tem credencial (' + preset.keyEnv + ') nos PCs: ' + missingPCs.join(', ') + '. Remova-os do alvo ou escolha outro modelo.'
+        error: 'O provedor "' + payload.preset.provider + '" não tem credencial (' + payload.preset.keyEnv + ') nos PCs: ' + missingPCs.join(', ') + '. Remova-os do alvo ou escolha outro modelo.'
       });
     }
-  }
-
-  if (targetsToUpdate.length === 0) {
-    return res.status(404).json({ success: false, error: 'Nenhum agente encontrado para o alvo especificado.' });
   }
 
   const updates = [];
@@ -244,41 +313,42 @@ router.post('/batch', async (req, res) => {
 
   for (const agent of targetsToUpdate) {
     try {
-      const readRes = await readRawConfig(agent.pc, agent.configPath);
-      if (!readRes.success) {
-        errors.push({ agent: agent.id, error: readRes.error });
-        continue;
-      }
-
-      const parsedOld = parseAgentConfig(readRes.content);
-      const previousModel = parsedOld.success ? parsedOld.data.model : null;
-
-      const newContent = applyModelChangesToYaml(readRes.content, {
-        model,
-        provider,
-        baseUrl,
-        reasoningEffort,
-        previousModel
-      });
-
-      const writeRes = await writeRawConfig(agent.pc, agent.configPath, newContent);
-      if (!writeRes.success) {
-        errors.push({ agent: agent.id, error: writeRes.error });
+      const applied = await applyToAgent(agent, payload);
+      if (!applied.success) {
+        errors.push({ agent: agent.id, name: agent.name, error: applied.error });
       } else {
-        updates.push({ agent: agent.id, name: agent.name, backupPath: writeRes.backupPath });
+        updates.push({ agent: agent.id, name: agent.name, unchanged: applied.unchanged, backupPath: applied.backupPath });
       }
     } catch (e) {
-      errors.push({ agent: agent.id, error: e.message });
+      errors.push({ agent: agent.id, name: agent.name, error: e.message });
+    }
+  }
+
+  // Reinício automático dos hosts que de fato receberam gravação
+  const restarts = {};
+  if (payload.restart && updates.length > 0) {
+    const pcsToRestart = [...new Set(targetsToUpdate.filter((a) => updates.some((u) => u.agent === a.id)).map((a) => a.pc))];
+    for (const pc of pcsToRestart) {
+      const r = await restartHermesGateway(pc);
+      if (r.success) panelState.markRestarted(pc);
+      invalidateRuntime(pc);
+      restarts[pc] = { success: !!r.success, output: r.stdout || r.stderr || r.error || '' };
     }
   }
 
   res.json({
+    // `success` reflete "gravou em todos"; `updatedCount` mostra o parcial quando houve falha.
     success: errors.length === 0,
+    partial: errors.length > 0 && updates.length > 0,
     totalAttempted: targetsToUpdate.length,
     updatedCount: updates.length,
+    model: payload.model,
+    reasoningEffort: payload.reasoningEffort,
+    provider: payload.provider,
     updates,
-    errors
+    errors,
+    restarts
   });
-});
+}));
 
 module.exports = router;

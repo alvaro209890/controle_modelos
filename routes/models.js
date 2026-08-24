@@ -122,9 +122,14 @@ function describeModel(id, meta) {
   return parts.join(' ');
 }
 
+// ids gratuitos do OpenCode "normal" (/zen/v1), validados em HTTP 200
+const ZEN_FREE_IDS = ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'];
+
 // ── consulta viva ao relay opencode-go ───────────────────────────────────────
 let liveCache = { ts: 0, ids: [] };
-const LIVE_TTL = 5 * 60 * 1000; // 5 min
+let lastAttemptTs = 0;
+const LIVE_TTL = 5 * 60 * 1000;   // 5 min de validade do catálogo vivo
+const RETRY_TTL = 30 * 1000;      // espera 30s antes de tentar de novo depois de uma falha
 
 function readKey() {
   if (process.env.OPENCODE_GO_API_KEY) return process.env.OPENCODE_GO_API_KEY;
@@ -160,7 +165,12 @@ async function fetchLiveIds() {
 // Lista de ids: viva (cacheada) com fallback na base
 async function goModelIds() {
   const now = Date.now();
-  if (now - liveCache.ts > LIVE_TTL) {
+  // Sem o `lastAttemptTs`, um relay fora do ar fazia TODA request de /providers pagar 12s de
+  // timeout — o painel demorava a abrir justamente quando a rede estava ruim.
+  const stale = now - liveCache.ts > LIVE_TTL;
+  const mayRetry = now - lastAttemptTs > RETRY_TTL;
+  if (stale && mayRetry) {
+    lastAttemptTs = now;
     const live = await fetchLiveIds();
     if (live && live.length > 0) {
       liveCache = { ts: now, ids: live };
@@ -180,10 +190,16 @@ function baseGoIds() {
 }
 
 // ── build dos providers ──────────────────────────────────────────────────────
-async function buildProviders() {
-  const goIds = await goModelIds();
-  const goModels = goIds.map(buildModel);
-
+/**
+ * Fonte ÚNICA do catálogo (2026-08-24).
+ *
+ * Antes existiam duas listas: `buildProviders()` (5 provedores, usada pelo front) e
+ * `_fallbackProviders()` (4 provedores, usada pela VALIDAÇÃO do backend). O `openrouter` só
+ * existia na primeira — então todo modelo do OpenRouter que o front oferecia era desconhecido
+ * na hora de salvar: sem preset, sem checagem de reasoning e sem checagem de credencial por PC.
+ * Agora as duas nascem daqui, mudando só a lista de ids do opencode-go.
+ */
+function providerList(goIds) {
   return [
     {
       id: 'opencode-go',
@@ -193,7 +209,7 @@ async function buildProviders() {
       availableOn: ['server', 'acer', 'windows'],
       badge: 'Padrão da frota',
       description: 'Provedor padrão da frota Hermes via OpenCode Go. Lista atualizada automaticamente do relay (cache 5 min).',
-      models: goModels
+      models: goIds.map(buildModel)
     },
     {
       id: 'opencode-zen',
@@ -203,9 +219,9 @@ async function buildProviders() {
       availableOn: ['server', 'acer', 'windows'],
       badge: '6 grátis',
       description: 'Modelos GRATUITOS do OpenCode normal (endpoint /zen/v1), todos validados em HTTP 200 (2026-08-24).',
-      models: ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'].map((id) => {
+      models: ZEN_FREE_IDS.map((id) => {
         const m = buildModel(id);
-        // reasoning: hy3-free segue a família hy3 (none|low|high); demais full
+        // reasoning: hy3-free segue a família hy3 (none|low|high); laguna aceita low|medium|high
         if (id === 'hy3-free') {
           m.allowedReasoning = ['none', 'low', 'high'];
           m.defaultReasoning = 'high';
@@ -227,7 +243,16 @@ async function buildProviders() {
       badge: 'xAI OAuth',
       description: 'Acesso via sessão SuperGrok autenticada (auth.json) ou XAI_API_KEY.',
       models: [
-        { ...buildModel('grok-4.6'), id: 'grok-4.6', name: 'Grok 4.6 (xAI SuperGrok)', allowedReasoning: ['low', 'high'], defaultReasoning: 'high', badge: 'xAI OAuth', description: 'Acesso via sessão SuperGrok autenticada.' }
+        {
+          ...buildModel('grok-4.6'),
+          id: 'grok-4.6',
+          name: 'Grok 4.6 (xAI SuperGrok)',
+          allowedReasoning: ['low', 'high'],
+          defaultReasoning: 'high',
+          badge: 'xAI OAuth',
+          contextLength: 131072,
+          description: 'Acesso via sessão SuperGrok autenticada.'
+        }
       ]
     },
     {
@@ -252,7 +277,7 @@ async function buildProviders() {
       badge: 'Multi-modelos',
       description: 'Curadoria de bons e baratos para código. Preços USD/M (2026-08-23).',
       models: [
-        { ...buildModel('deepseek-v4-flash'), id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek V4 Flash (OR)', badge: '$0.06 / $0.12', description: 'Excelente para código, 1M ctx. $0.059/M in, $0.117/M out.' },
+        { ...buildModel('deepseek-v4-flash'), id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek V4 Flash (OR)', badge: '$0.06 / $0.12', costInput: 0.059, costOutput: 0.117, description: 'Excelente para código, 1M ctx. $0.059/M in, $0.117/M out.' },
         { id: 'qwen/qwen3.7-flash', name: 'Qwen 3.7 Flash (OR)', allowedReasoning: ['none','low','medium','high'], defaultReasoning: 'medium', badge: '$0.03 / $0.13', contextLength: 1000000, costInput: 0.03, costOutput: 0.13, free: false, description: 'Muito barato, 1M ctx. $0.03/M in, $0.13/M out.' },
         { id: 'qwen/qwen3-coder-next', name: 'Qwen3 Coder Next (OR)', allowedReasoning: ['none','low','medium','high'], defaultReasoning: 'high', badge: '$0.12 / $0.80', contextLength: 262144, costInput: 0.12, costOutput: 0.80, free: false, description: 'Especializado em código, 262K ctx. $0.12/M in, $0.80/M out.' },
         { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano (OR)', allowedReasoning: ['none','low','medium','high'], defaultReasoning: 'high', badge: '$0.05 / $0.40', contextLength: 400000, costInput: 0.05, costOutput: 0.40, free: false, description: 'OpenAI barato, 400K ctx. $0.05/M in, $0.40/M out.' },
@@ -263,6 +288,15 @@ async function buildProviders() {
       ]
     }
   ];
+}
+
+async function buildProviders() {
+  return providerList(await goModelIds());
+}
+
+// Catálogo estático (sem rede) — usado pela validação do backend e como fallback do endpoint
+function _fallbackProviders() {
+  return providerList(baseGoIds());
 }
 
 function flattenPresets(providers) {
@@ -276,15 +310,15 @@ function flattenPresets(providers) {
 }
 
 /**
- * GET /api/models/providers — catálogo hierárquico (open-code-go atualizado ao vivo)
+ * GET /api/models/providers — catálogo hierárquico (opencode-go atualizado ao vivo)
  */
 router.get('/providers', async (req, res) => {
   try {
     const providers = await buildProviders();
     res.json({ success: true, providers });
   } catch (e) {
-    // fallback: catálogo base estático sem consulta viva
-    res.json({ success: true, providers: require('./models')._fallbackProviders() });
+    console.error('/api/models/providers falhou, servindo catálogo base:', e.message);
+    res.json({ success: true, providers: _fallbackProviders(), degraded: true });
   }
 });
 
@@ -296,45 +330,19 @@ router.get('/presets', async (req, res) => {
     const providers = await buildProviders();
     res.json({ success: true, presets: flattenPresets(providers) });
   } catch (e) {
-    res.json({ success: true, presets: [] });
+    console.error('/api/models/presets falhou, servindo catálogo base:', e.message);
+    res.json({ success: true, presets: flattenPresets(_fallbackProviders()), degraded: true });
   }
 });
 
-// fallback sem consulta viva (para validação e quando o fetch falha)
-function _fallbackProviders() {
-  return [{
-    id: 'opencode-go', name: 'OpenCode Go', baseUrl: OP, keyEnv: 'OPENCODE_GO_API_KEY',
-    availableOn: ['server', 'acer', 'windows'], badge: 'Padrão da frota',
-    description: 'Catálogo base.',
-    models: baseGoIds().map(buildModel)
-  }, {
-    id: 'opencode-zen', name: 'OpenCode Zen (grátis)', baseUrl: 'https://opencode.ai/zen/v1', keyEnv: 'OPENCODE_ZEN_API_KEY',
-    availableOn: ['server', 'acer', 'windows'], badge: 'Gratuitos do OpenCode normal', description: 'Modelos gratuitos validados (HTTP 200).',
-    models: ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'].map((id) => {
-      const m = buildModel(id);
-      m.badge = 'GRÁTIS 🟢';
-      m.name = prettyName(id);
-      return m;
-    })
-  }].concat([{
-    id: 'xai-oauth', name: 'xAI SuperGrok', baseUrl: 'https://api.x.ai/v1', keyEnv: 'XAI_API_KEY (ou sessão SuperGrok)',
-    availableOn: ['server', 'acer'], badge: 'xAI OAuth', description: 'Acesso via sessão SuperGrok autenticada.',
-    models: [{ ...buildModel('grok-4.6'), id: 'grok-4.6', name: 'Grok 4.6 (xAI SuperGrok)', allowedReasoning: ['low', 'high'], defaultReasoning: 'high', badge: 'xAI OAuth', contextLength: 131072, costInput: 0, costOutput: 0, description: 'Acesso via sessão SuperGrok autenticada.' }]
-  }, {
-    id: 'deepseek-standard', name: 'DeepSeek API (Oficial)', baseUrl: 'https://api.deepseek.com/v1', keyEnv: 'DEEPSEEK_API_KEY',
-    availableOn: ['server', 'acer', 'windows'], badge: 'DeepSeek Oficial', description: 'API oficial da DeepSeek com tarifação por token.',
-    models: [
-      { ...buildModel('deepseek-v4-pro'), name: 'DeepSeek V4 Pro (Oficial)', badge: 'DeepSeek Oficial' },
-      { ...buildModel('deepseek-v4-flash'), name: 'DeepSeek V4 Flash (Oficial)', badge: 'DeepSeek Oficial' }
-    ]
-  }]);
-}
-
-// findModelPreset síncrono — validação usa o catálogo base (não depende de rede)
-function findModelPreset(modelId) {
-  for (const p of _fallbackProviders()) {
+// Preset de um modelo: procura primeiro no provider informado (o mesmo id pode existir em mais
+// de um provedor — `deepseek-v4-pro` está no opencode-go E no deepseek-standard).
+function findModelPreset(modelId, providerId) {
+  const providers = _fallbackProviders();
+  const ordered = providerId ? providers.slice().sort((a, b) => (a.id === providerId ? -1 : b.id === providerId ? 1 : 0)) : providers;
+  for (const p of ordered) {
     const m = p.models.find((mm) => mm.id === modelId);
-    if (m) return { ...m, provider: p.id, baseUrl: p.baseUrl, availableOn: p.availableOn, keyEnv: p.keyEnv };
+    if (m) return { ...m, provider: p.id, baseUrl: p.baseUrl, availableOn: p.availableOn, keyEnv: p.keyEnv, providerName: p.name };
   }
   return null;
 }
@@ -346,9 +354,14 @@ function findProviderForModel(modelId) {
   return null;
 }
 
+function findProviderById(providerId) {
+  return _fallbackProviders().find((p) => p.id === providerId) || null;
+}
+
 module.exports = router;
 module.exports.PROVIDERS = _fallbackProviders;
 module.exports.findProviderForModel = findProviderForModel;
+module.exports.findProviderById = findProviderById;
 module.exports.findModelPreset = findModelPreset;
 module.exports.buildProviders = buildProviders;
 module.exports._fallbackProviders = _fallbackProviders;

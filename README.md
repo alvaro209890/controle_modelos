@@ -22,6 +22,40 @@ Permitir que o Álvaro (ou qualquer agente autorizado) visualize e configure em 
 
 ---
 
+## ⚠️ Gravar ≠ Aplicar (leia antes de trocar modelo)
+
+O gateway Hermes lê o `config.yaml` **uma única vez, quando sobe**. Gravar o arquivo não muda o
+modelo do agente que já está rodando — foi exatamente o que aconteceu em 24/08/2026: o perfil
+`geoforest` do `server-desktop` foi gravado às 08:27 com `glm-5.2`, o gateway estava no ar desde
+as 22:36 do dia anterior, e o agente seguiu respondendo com `ox-alpha-free`.
+
+Como o painel trata isso desde então:
+
+- **`Reiniciar gateway ao salvar`** (interruptor na barra de ações, ligado por padrão): o botão
+  `💾 Salvar` grava o YAML **e** reinicia o gateway daquele PC, então a troca vale na hora. O
+  painel confirma antes, porque o reinício derruba por alguns segundos todos os agentes do PC.
+- **Selo `⏳ ainda não aplicado`**: cada card compara o `mtime` do `config.yaml` com o horário em
+  que o gateway subiu. Se o arquivo for mais novo, o card mostra o aviso e um botão
+  `🔄 Aplicar agora`. Vale também para edições feitas fora do painel, direto por SSH.
+- **Contador `pendentes`** no topo, com o total de agentes nessa situação.
+- **`No arquivo:`** em cada card mostra o que está gravado; quando a seleção da tela diverge do
+  arquivo, o card fica marcado como **alteração não salva**.
+
+---
+
+## 🧪 Testes
+
+```bash
+npm test        # editor cirúrgico de YAML, validação de ids e catálogo de provedores
+```
+
+Os testes usam `test/fixtures/perfil-exemplo.yaml` — um config sintético com a mesma forma dos
+reais (comentários, bloco literal, `reasoning_overrides`, `delegation`). Eles garantem que a
+edição preserva o resto do arquivo, que chave ausente é criada em vez de ignorada em silêncio, e
+que ids namespaced do OpenRouter (`fornecedor/modelo`) passam pela validação.
+
+---
+
 ## 🗺️ Mapa Rápido da Frota (3 PCs / 13 Agentes)
 
 | Computador | Host / Alias SSH | SO / Hermes Home | Agentes / Perfis (Discord) |

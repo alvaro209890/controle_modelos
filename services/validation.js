@@ -1,4 +1,7 @@
 const SAFE_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+// Ids de modelo podem ser namespaced (OpenRouter: `deepseek/deepseek-v4-flash`).
+// Sem a `/` liberada aqui, TODO modelo do OpenRouter era recusado com 400 no salvar.
+const MODEL_RE = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
 const REASONING_LEVELS = new Set(['none', 'low', 'medium', 'high', 'max']);
 const KNOWN_PCS = new Set(['server', 'acer', 'windows']);
 
@@ -10,7 +13,13 @@ function safeIdentifier(value) {
 }
 
 function safeModel(value) {
-  return safeIdentifier(value);
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  if (!v || v.length > 96) return null;
+  if (!MODEL_RE.test(v)) return null;
+  // `..` e `//` não aparecem em id legítimo e são o vetor clássico de path traversal
+  if (v.includes('..') || v.includes('//') || v.endsWith('/')) return null;
+  return v;
 }
 
 function safeReasoning(value) {
@@ -41,4 +50,10 @@ function safeBatchTarget(value) {
   return safePc(value);
 }
 
-module.exports = { safeIdentifier, safeModel, safeReasoning, safeBaseUrl, safePc, safeBatchTarget };
+function safeBool(value, fallback = false) {
+  if (value === true || value === 'true' || value === 1 || value === '1') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0') return false;
+  return fallback;
+}
+
+module.exports = { safeIdentifier, safeModel, safeReasoning, safeBaseUrl, safePc, safeBatchTarget, safeBool, KNOWN_PCS };

@@ -1,0 +1,37 @@
+# Config de exemplo com a mesma forma dos config.yaml da frota Hermes.
+# Usado só nos testes — nenhum dado real de agente entra aqui.
+model:
+  default: ox-alpha-free
+  provider: opencode-go
+  base_url: https://opencode.ai/zen/go/v1
+  api_mode: chat_completions
+providers:
+  deepseek:
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+fallback_providers: []
+toolsets:
+  - hermes-cli
+max_live_sessions: 8
+agent:
+  max_turns: 500
+  gateway_timeout: 3600
+  # comentário no meio da seção agent
+  verbose: false
+  reasoning_effort: max
+  reasoning_overrides:
+    ox-alpha-free: max
+    grok-4.6: high
+    hy3: high
+  personalities:
+    helpful: You are a helpful, friendly AI assistant.
+    noir: |
+      Bloco literal com dois pontos: aqui dentro nada pode virar seção.
+      model: isto NÃO é a seção model.
+memory:
+  enabled: true
+delegation:
+  model: ox-alpha-free
+  reasoning_effort: max
+  allowed_models:
+    - ox-alpha-free

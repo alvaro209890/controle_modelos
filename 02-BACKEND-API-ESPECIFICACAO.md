@@ -53,8 +53,12 @@ Provider (id, name, baseUrl, keyEnv, availableOn)  →  Model (id, name, allowed
 ```
 
 - **`availableOn`** — lista de PCs (`server`/`acer`/`windows`) em que aquele provedor tem **credencial real** (verificada no `.env` de cada máquina). O frontend usa isso para filtrar provedores elegíveis por coluna de PC, e o backend **recusa** um batch cujo alvo inclua um PC sem a chave do provedor.
-- **`allowedReasoning`** — níveis de reasoning aceitos por aquele modelo específico (ex.: `ox-alpha-free` só aceita `low`/`high`/`max`; `deepseek-v4-pro` aceita `none`/`low`/`medium`/`high`).
+- **`allowedReasoning`** — níveis de reasoning aceitos por aquele modelo específico (ex.: `ox-alpha-free` só aceita `low`/`high`/`max`; `glm-5.2` só `high`/`max`; `hy3` só `none`/`low`/`high`; família deepseek aceita `none`..`max`).
 - **`defaultReasoning`** — o nível padrão sugerido ao trocar para aquele modelo.
+
+O `opencode-go` lista **29 modelos** (validados 1:1 contra `GET /models` do relay em 2026-08-23);
+o `openrouter` lista uma **curadoria de 8 modelos bons e baratos para código** (com preço USD/M tokens
+no badge). Espera-se que mudanças no catálogo do relay se reflitam no `routes/models.js`.
 
 ### Endpoints
 

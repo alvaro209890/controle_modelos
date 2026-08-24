@@ -73,3 +73,18 @@ Esta pasta foi estruturada com planos e especificações detalhadas para que qua
   - **windows**: o shell padrão do Windows OpenSSH é PowerShell 5.1, que não suporta `&&`;
     a cadeia `hermes gateway stop && schtasks /Run /TN HermesGateway` é envolta em `cmd /c "…"`.
   - **acer**: já funcionava (shell de login via SSH seta o bus); comando mantém-se com o env explícito.
+
+## 📦 Catálogo de Modelos
+
+O catálogo é **hierárquico** (Provider → Model → Reasoning). Atualizado em 2026-08-23:
+
+| Provider | Chave (PCs) | Modelos |
+|---|---|---|
+| **opencode-go** | `OPENCODE_GO_API_KEY` (3 PCs) | **29 modelos** — todos os que o relay lista: hy3, hy3-preview, ox-alpha-free, glm-5(.1/.2/.3), kimi-k2.5/k2.6/k2.7-code/k3, deepseek-v4-pro/flash/flash-vision-exp, qwen3.5/3.6/3.7 plus e max (3.7/3.8 max), mimo-v2-pro/omni/2.5/2.5-pro, minimax-m2.5/m2.7/m3, gpt-5.6-luna, grok-4.5, muse-spark-1.2-contributor |
+| **xai-oauth** | `XAI_API_KEY`/SuperGrok (server, acer) | grok-4.6 |
+| **deepseek-standard** | `DEEPSEEK_API_KEY` (3 PCs) | deepseek-v4-pro, deepseek-v4-flash (API oficial) |
+| **openrouter** | `OPENROUTER_API_KEY` (server, acer) | **8 curados** (bons e baratos p/ código): deepseek-v4-flash, qwen3.7-flash, qwen3-coder-next, gpt-5-nano, hy3, gemini-2.5-flash, claude-haiku-4.5, kimi-k2.5 |
+
+O reasoning de cada modelo é restrito ao que ele realmente aceita (ex.: `ox-alpha-free` → `low|high|max`;
+`glm-5.2` → `high|max`; `hy3` → `none|low|high`; família deepseek → `none..max`), conforme o plugin
+`opencode-zen` do Hermes. No OpenRouter os preços (USD/M tokens) ficam no badge de cada modelo.

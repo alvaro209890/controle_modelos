@@ -84,7 +84,7 @@ Este documento detalha o design, os componentes visuais, os fluxos de interaçã
 - **Emoji e Canal do Discord** (`🌲｜geoforest`, `📋｜trello-simcar`, etc.) + ID do canal.
 - **Cascata de Seletores (Provider → Model → Reasoning)**, alinhada ao catálogo hierárquico:
   1. **Provider**: dropdown com os provedores que têm credencial naquele PC (`availableOn`). Ex.: no Windows só aparecem `opencode-go` e `deepseek-standard` (o `xai-oauth` não está disponível lá).
-  2. **Modelo**: ao trocar o provider, o dropdown de modelos é repovoado com **apenas os modelos daquele provider**.
+  2. **Modelo**: ao trocar o provider, o dropdown de modelos é repovoado com **apenas os modelos daquele provider**. O `opencode-go` lista **29 modelos** (todos os do relay); o `openrouter` lista os **8 curados** (bons e baratos para código).
   3. **Reasoning**: ao escolher o modelo, o dropdown de reasoning é repovoado com **apenas os níveis aceitos por aquele modelo** (`allowedReasoning`), já marcando o `defaultReasoning`.
 - Em cada card o estado atual do agente é reconstruído: se o modelo ativo não estiver em nenhum provider homologado, é exibido como opção `(custom)`; se o reasoning ativo não estiver na lista do modelo, é exibido como `(atual)`.
 - **Botões "Salvar" e "Testar Conexão"**:

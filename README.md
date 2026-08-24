@@ -81,12 +81,21 @@ O catálogo é **hierárquico** (Provider → Model → Reasoning). Atualizado e
 | Provider | Chave (PCs) | Modelos |
 |---|---|---|
 | **opencode-go** | `OPENCODE_GO_API_KEY` (3 PCs) | **29 modelos** — lista **consultada ao vivo no relay** (GET /models, cache 5 min, com fallback em lista embutida). Só `ox-alpha-free` é **GRÁTIS** ($0); os demais exibem custo $/M e contexto de tokens no rótulo/front. |
+| **opencode-zen** | `OPENCODE_ZEN_API_KEY` (3 PCs) | **6 modelos GRATUITOS** do OpenCode normal (`/zen/v1`), todos validados em HTTP 200: hy3-free, mimo-v2.5-free, laguna-s-2.1-free, nemotron-3.5-lightning-free, nemotron-3-ultra-free, big-pickle |
 | **xai-oauth** | `XAI_API_KEY`/SuperGrok (server, acer) | grok-4.6 |
 | **deepseek-standard** | `DEEPSEEK_API_KEY` (3 PCs) | deepseek-v4-pro, deepseek-v4-flash (API oficial) |
 | **openrouter** | `OPENROUTER_API_KEY` (server, acer) | **8 curados** (bons e baratos p/ código) |
 
-Cada modelo do opencode-go carrega no front: **contexto de tokens** (ex.: `1M`, `262K`) e
-**se é grátis ou o custo** $/M (US$ de entrada/saída), vindos do catálogo oficial do CLI opencode.
+Cada modelo carrega no front: **contexto de tokens** (ex.: `1M`, `262K`) e **se é grátis ou o custo**
+$/M (US$ de entrada/saída), vindos do catálogo oficial do CLI opencode.
+
+> **Gratuitos do OpenCode normal (ZEN):** além do `ox-alpha-free` (opencode-go), o OpenCode expõe
+> outros modelos **grátis** no endpoint `/zen/v1`. Testados ao vivo em 2026-08-24 (HTTP 200):
+> `hy3-free`, `mimo-v2.5-free`, `laguna-s-2.1-free`, `nemotron-3.5-lightning-free`,
+> `nemotron-3-ultra-free` e `big-pickle`. Eles vivem no provider `opencode-zen`
+> (`OPENCODE_ZEN_API_KEY` = mesma valor da `OPENCODE_GO_API_KEY`, configurada nos 3 PCs). Os demais
+> `*-free` do catálogo zen (deepseek-v4-flash-free, kimi-k2.5-free, minimax-m3-free, etc.) retornam
+> "not supported"/"unavailable" e **não** foram incluídos.
 
 > **Atualização automática:** o endpoint `GET /api/models/providers` consulta o relay
 > `opencode.ai/zen/go/v1/models` **ao vivo** (com cache de 5 min). Se a OpenCode adicionar/remover

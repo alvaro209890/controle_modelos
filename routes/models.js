@@ -54,7 +54,15 @@ const MODEL_META = {
   // misc
   'gpt-5.6-luna':   { ctx: 1050000, out: 128000, in: 0.2,    outCost: 1.2, free: false },
   'grok-4.5':       { ctx: 500000,  out: 500000, in: 2,      outCost: 6,   free: false },
-  'muse-spark-1.2-contributor': { ctx: 1048576, out: 131072, in: 0.1, outCost: 0.2, free: false }
+  'muse-spark-1.2-contributor': { ctx: 1048576, out: 131072, in: 0.1, outCost: 0.2, free: false },
+
+  // ── opencode normal (ZEN /zen/v1) — modelos GRATUITOS validados em HTTP 200 (2026-08-24) ──
+  'hy3-free':       { ctx: 190000,  out: 64000,  in: 0, outCost: 0, free: true },
+  'mimo-v2.5-free': { ctx: 200000,  out: 32000,  in: 0, outCost: 0, free: true },
+  'laguna-s-2.1-free': { ctx: 256000, out: 32000, in: 0, outCost: 0, free: true },
+  'nemotron-3.5-lightning-free': { ctx: 262144, out: 262144, in: 0, outCost: 0, free: true },
+  'nemotron-3-ultra-free': { ctx: 1000000, out: 128000, in: 0, outCost: 0, free: true },
+  'big-pickle': { ctx: 200000, out: 32000, in: 0, outCost: 0, free: true }
 };
 
 // reasoning por família (plugin opencode-zen)
@@ -98,7 +106,9 @@ function prettyName(id) {
     'qwen3.5-plus': 'Qwen 3.5 Plus', 'qwen3.6-plus': 'Qwen 3.6 Plus', 'qwen3.7-plus': 'Qwen 3.7 Plus', 'qwen3.7-max': 'Qwen 3.7 Max', 'qwen3.8-max': 'Qwen 3.8 Max',
     'mimo-v2-pro': 'MiMo V2 Pro', 'mimo-v2-omni': 'MiMo V2 Omni', 'mimo-v2.5': 'MiMo V2.5', 'mimo-v2.5-pro': 'MiMo V2.5 Pro',
     'minimax-m2.5': 'MiniMax M2.5', 'minimax-m2.7': 'MiniMax M2.7', 'minimax-m3': 'MiniMax M3',
-    'gpt-5.6-luna': 'GPT-5.6 Luna', 'grok-4.5': 'Grok 4.5', 'muse-spark-1.2-contributor': 'Muse Spark 1.2'
+    'gpt-5.6-luna': 'GPT-5.6 Luna', 'grok-4.5': 'Grok 4.5', 'muse-spark-1.2-contributor': 'Muse Spark 1.2',
+    'hy3-free': 'Hy3 Free', 'mimo-v2.5-free': 'MiMo V2.5 Free', 'laguna-s-2.1-free': 'Laguna S2.1 Free',
+    'nemotron-3.5-lightning-free': 'Nemotron 3.5 Lightning Free', 'nemotron-3-ultra-free': 'Nemotron 3 Ultra Free', 'big-pickle': 'Big Pickle'
   };
   return map[id] || id;
 }
@@ -184,6 +194,29 @@ async function buildProviders() {
       badge: 'Padrão da frota',
       description: 'Provedor padrão da frota Hermes via OpenCode Go. Lista atualizada automaticamente do relay (cache 5 min).',
       models: goModels
+    },
+    {
+      id: 'opencode-zen',
+      name: 'OpenCode (Zen — grátis)',
+      baseUrl: 'https://opencode.ai/zen/v1',
+      keyEnv: 'OPENCODE_ZEN_API_KEY',
+      availableOn: ['server', 'acer', 'windows'],
+      badge: 'Gratuitos do OpenCode normal',
+      description: 'Modelos GRATUITOS do OpenCode normal (endpoint /zen/v1), todos validados em HTTP 200 (2026-08-24).',
+      models: ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'].map((id) => {
+        const m = buildModel(id);
+        // reasoning: hy3-free segue a família hy3 (none|low|high); demais full
+        if (id === 'hy3-free') {
+          m.allowedReasoning = ['none', 'low', 'high'];
+          m.defaultReasoning = 'high';
+        } else if (id === 'laguna-s-2.1-free') {
+          m.allowedReasoning = ['low', 'medium', 'high'];
+          m.defaultReasoning = 'high';
+        }
+        m.badge = 'GRÁTIS 🟢';
+        m.name = prettyName(id);
+        return m;
+      })
     },
     {
       id: 'xai-oauth',
@@ -274,6 +307,15 @@ function _fallbackProviders() {
     availableOn: ['server', 'acer', 'windows'], badge: 'Padrão da frota',
     description: 'Catálogo base.',
     models: baseGoIds().map(buildModel)
+  }, {
+    id: 'opencode-zen', name: 'OpenCode (Zen — grátis)', baseUrl: 'https://opencode.ai/zen/v1', keyEnv: 'OPENCODE_ZEN_API_KEY',
+    availableOn: ['server', 'acer', 'windows'], badge: 'Gratuitos do OpenCode normal', description: 'Modelos gratuitos validados (HTTP 200).',
+    models: ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'].map((id) => {
+      const m = buildModel(id);
+      m.badge = 'GRÁTIS 🟢';
+      m.name = prettyName(id);
+      return m;
+    })
   }].concat([{
     id: 'xai-oauth', name: 'xAI SuperGrok', baseUrl: 'https://api.x.ai/v1', keyEnv: 'XAI_API_KEY (ou sessão SuperGrok)',
     availableOn: ['server', 'acer'], badge: 'xAI OAuth', description: 'Acesso via sessão SuperGrok autenticada.',

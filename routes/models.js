@@ -125,30 +125,23 @@ function describeModel(id, meta) {
 // ids gratuitos do OpenCode "normal" (/zen/v1), validados em HTTP 200
 const ZEN_FREE_IDS = ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'];
 
-// Catálogo medido no endpoint do 9Router do server-desktop. Não inclui uma
-// lista teórica: cada id abaixo foi retornado por GET /v1/models em 26/08/2026
-// (52 modelos). O serviço fica acessível apenas pela malha Tailscale da frota.
+// Catálogo dos modelos do 9Router do server-desktop que respondem HTTP 200 em
+// teste real (26/08/2026). Gemini CLI (gc/) e KiloCode (kc/) foram removidos pelo
+// Álvaro; os IDs abaixos são só os que passaram num POST de verdade (os que davam
+// 400/402/404/410/403 ficaram de fora). O serviço é acessível só pela malha Tailscale.
 const NINEROUTER_URL = 'http://100.65.138.58:20128/v1';
 const NINEROUTER_IDS = [
   'ag/claude-opus-4-6-thinking', 'ag/claude-sonnet-4-6', 'ag/gemini-3-flash',
   'ag/gemini-3-flash-agent', 'ag/gemini-3.1-pro-low', 'ag/gemini-3.5-flash-extra-low',
-  'ag/gemini-3.5-flash-high', 'ag/gemini-3.5-flash-low', 'ag/gemini-3.6-flash-high',
+  'ag/gemini-3.5-flash-low', 'ag/gemini-3.6-flash-high',
   'ag/gemini-3.6-flash-low', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.7-flash-high',
   'ag/gemini-3.7-flash-low', 'ag/gemini-3.7-flash-medium', 'ag/gemini-pro-agent',
   'ag/gpt-oss-120b-medium',
-  'cx/gpt-5.3-codex-spark', 'cx/gpt-5.3-codex-spark-review', 'cx/gpt-5.4',
-  'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.4-review', 'cx/gpt-5.5',
-  'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review', 'cx/gpt-5.6-sol',
-  'cx/gpt-5.6-sol-review', 'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
-  'gc/gemini-2.5-flash', 'gc/gemini-2.5-flash-lite', 'gc/gemini-2.5-pro',
-  'gc/gemini-3-flash-preview', 'gc/gemini-3-pro-preview', 'gc/gemini-3.1-flash-lite-preview',
-  'gc/gemini-3.1-pro-preview',
-  'kc/anthropic/claude-opus-4-20250514', 'kc/anthropic/claude-sonnet-4-20250514',
-  'kc/deepseek/deepseek-chat', 'kc/deepseek/deepseek-reasoner',
-  'kc/google/gemini-2.5-flash', 'kc/google/gemini-2.5-pro', 'kc/openai/gpt-4.1',
-  'kc/openai/o3',
-  'ollama/glm-4.7-flash', 'ollama/glm-5', 'ollama/gpt-oss:120b', 'ollama/kimi-k2.5',
-  'ollama/minimax-m2.5', 'ollama/minimax-m3', 'ollama/qwen3.5'
+  'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.5',
+  'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
+  'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
+  'ollama/gpt-oss:120b', 'ollama/minimax-m3',
+  'nvidia/minimaxai/minimax-m3'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -159,29 +152,17 @@ const NINEROUTER_THINKING = {
   'ag/claude-opus-4-6-thinking': 'claude-budget', 'ag/claude-sonnet-4-6': 'claude-adaptive',
   'ag/gemini-3-flash': 'gemini-level', 'ag/gemini-3-flash-agent': 'gemini-level',
   'ag/gemini-3.1-pro-low': 'gemini-level', 'ag/gemini-3.5-flash-extra-low': 'gemini-level',
-  'ag/gemini-3.5-flash-high': 'gemini-level', 'ag/gemini-3.5-flash-low': 'gemini-level',
-  'ag/gemini-3.6-flash-high': 'gemini-level', 'ag/gemini-3.6-flash-low': 'gemini-level',
-  'ag/gemini-3.6-flash-medium': 'gemini-level', 'ag/gemini-3.7-flash-high': 'gemini-level',
+  'ag/gemini-3.5-flash-low': 'gemini-level', 'ag/gemini-3.6-flash-high': 'gemini-level',
+  'ag/gemini-3.6-flash-low': 'gemini-level', 'ag/gemini-3.6-flash-medium': 'gemini-level',
+  'ag/gemini-3.7-flash-high': 'gemini-level',
   'ag/gemini-3.7-flash-low': 'gemini-level', 'ag/gemini-3.7-flash-medium': 'gemini-level',
   'ag/gemini-pro-agent': null, 'ag/gpt-oss-120b-medium': 'openai',
-  'cx/gpt-5.3-codex-spark': 'openai', 'cx/gpt-5.3-codex-spark-review': 'openai',
-  'cx/gpt-5.4': 'openai', 'cx/gpt-5.4-mini': 'openai', 'cx/gpt-5.4-mini-review': 'openai',
-  'cx/gpt-5.4-review': 'openai', 'cx/gpt-5.5': 'openai', 'cx/gpt-5.5-review': 'openai',
-  'cx/gpt-5.6-luna': 'openai', 'cx/gpt-5.6-luna-review': 'openai', 'cx/gpt-5.6-sol': 'openai',
-  'cx/gpt-5.6-sol-review': 'openai', 'cx/gpt-5.6-terra': 'openai',
-  'cx/gpt-5.6-terra-review': 'openai',
-  'gc/gemini-2.5-flash': 'gemini-budget', 'gc/gemini-2.5-flash-lite': 'gemini-budget',
-  'gc/gemini-2.5-pro': 'gemini-budget', 'gc/gemini-3-flash-preview': 'gemini-level',
-  'gc/gemini-3-pro-preview': 'gemini-level', 'gc/gemini-3.1-flash-lite-preview': 'gemini-level',
-  'gc/gemini-3.1-pro-preview': 'gemini-level',
-  'kc/anthropic/claude-opus-4-20250514': 'claude-budget',
-  'kc/anthropic/claude-sonnet-4-20250514': 'claude-budget',
-  'kc/deepseek/deepseek-chat': null, 'kc/deepseek/deepseek-reasoner': 'deepseek',
-  'kc/google/gemini-2.5-flash': 'gemini-budget', 'kc/google/gemini-2.5-pro': 'gemini-budget',
-  'kc/openai/gpt-4.1': null, 'kc/openai/o3': 'openai',
-  'ollama/glm-4.7-flash': 'zai', 'ollama/glm-5': 'zai', 'ollama/gpt-oss:120b': 'openai',
-  'ollama/kimi-k2.5': 'kimi', 'ollama/minimax-m2.5': 'minimax',
-  'ollama/minimax-m3': 'minimax', 'ollama/qwen3.5': 'qwen'
+  'cx/gpt-5.4-mini': 'openai', 'cx/gpt-5.4-mini-review': 'openai',
+  'cx/gpt-5.5': 'openai', 'cx/gpt-5.5-review': 'openai',
+  'cx/gpt-5.6-luna': 'openai', 'cx/gpt-5.6-luna-review': 'openai',
+  'cx/gpt-5.6-terra': 'openai', 'cx/gpt-5.6-terra-review': 'openai',
+  'ollama/gpt-oss:120b': 'openai', 'ollama/minimax-m3': 'minimax',
+  'nvidia/minimaxai/minimax-m3': 'openai'
 };
 
 // reasoning_effort aceito por família de thinkingFormat (coerente com o Hermes)
@@ -209,7 +190,8 @@ function ninerouterReasoning(id) {
 function ninerouterName(id) {
   const [prefix, ...parts] = id.split('/');
   const source = {
-    ag: 'Antigravity', gc: 'Gemini CLI', kc: 'KiloCode', cx: 'Codex', ollama: 'Ollama'
+    ag: 'Antigravity', cx: 'Codex', ollama: 'Ollama',
+    nvidia: 'NVIDIA NIM'
   }[prefix] || prefix;
   return source + ' — ' + parts.join('/');
 }

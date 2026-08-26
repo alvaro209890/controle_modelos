@@ -126,29 +126,85 @@ function describeModel(id, meta) {
 const ZEN_FREE_IDS = ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'];
 
 // Catálogo medido no endpoint do 9Router do server-desktop. Não inclui uma
-// lista teórica: cada id abaixo foi retornado por GET /v1/models em 26/08/2026.
-// O serviço fica acessível apenas pela malha Tailscale da frota.
+// lista teórica: cada id abaixo foi retornado por GET /v1/models em 26/08/2026
+// (52 modelos). O serviço fica acessível apenas pela malha Tailscale da frota.
 const NINEROUTER_URL = 'http://100.65.138.58:20128/v1';
 const NINEROUTER_IDS = [
-  'ag/gemini-3.7-flash-high', 'ag/gemini-3.7-flash-medium', 'ag/gemini-3.7-flash-low',
-  'ag/gemini-3.6-flash-high', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.5-flash-high',
-  'ag/gemini-3-flash-agent', 'ag/gemini-3.5-flash-low', 'ag/gemini-3.5-flash-extra-low',
-  'ag/gemini-pro-agent', 'ag/gemini-3.1-pro-low', 'ag/claude-sonnet-4-6',
-  'ag/claude-opus-4-6-thinking', 'ag/gpt-oss-120b-medium', 'ag/gemini-3-flash',
-  'gc/gemini-3.1-pro-preview', 'gc/gemini-3-pro-preview', 'gc/gemini-3-flash-preview',
-  'gc/gemini-3.1-flash-lite-preview', 'gc/gemini-2.5-pro', 'gc/gemini-2.5-flash',
-  'gc/gemini-2.5-flash-lite', 'kc/anthropic/claude-sonnet-4-20250514',
-  'kc/anthropic/claude-opus-4-20250514', 'kc/google/gemini-2.5-pro',
-  'kc/google/gemini-2.5-flash', 'kc/openai/gpt-4.1', 'kc/openai/o3',
+  'ag/claude-opus-4-6-thinking', 'ag/claude-sonnet-4-6', 'ag/gemini-3-flash',
+  'ag/gemini-3-flash-agent', 'ag/gemini-3.1-pro-low', 'ag/gemini-3.5-flash-extra-low',
+  'ag/gemini-3.5-flash-high', 'ag/gemini-3.5-flash-low', 'ag/gemini-3.6-flash-high',
+  'ag/gemini-3.6-flash-low', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.7-flash-high',
+  'ag/gemini-3.7-flash-low', 'ag/gemini-3.7-flash-medium', 'ag/gemini-pro-agent',
+  'ag/gpt-oss-120b-medium',
+  'cx/gpt-5.3-codex-spark', 'cx/gpt-5.3-codex-spark-review', 'cx/gpt-5.4',
+  'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.4-review', 'cx/gpt-5.5',
+  'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review', 'cx/gpt-5.6-sol',
+  'cx/gpt-5.6-sol-review', 'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
+  'gc/gemini-2.5-flash', 'gc/gemini-2.5-flash-lite', 'gc/gemini-2.5-pro',
+  'gc/gemini-3-flash-preview', 'gc/gemini-3-pro-preview', 'gc/gemini-3.1-flash-lite-preview',
+  'gc/gemini-3.1-pro-preview',
+  'kc/anthropic/claude-opus-4-20250514', 'kc/anthropic/claude-sonnet-4-20250514',
   'kc/deepseek/deepseek-chat', 'kc/deepseek/deepseek-reasoner',
-  'cx/gpt-5.6-sol', 'cx/gpt-5.6-sol-review', 'cx/gpt-5.6-terra',
-  'cx/gpt-5.6-terra-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
-  'cx/gpt-5.5', 'cx/gpt-5.5-review', 'cx/gpt-5.4', 'cx/gpt-5.4-review',
-  'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.3-codex-spark',
-  'cx/gpt-5.3-codex-spark-review', 'ollama/gpt-oss:120b', 'ollama/kimi-k2.5',
-  'ollama/glm-5', 'ollama/minimax-m2.5', 'ollama/glm-4.7-flash', 'ollama/qwen3.5',
-  'ollama/minimax-m3'
+  'kc/google/gemini-2.5-flash', 'kc/google/gemini-2.5-pro', 'kc/openai/gpt-4.1',
+  'kc/openai/o3',
+  'ollama/glm-4.7-flash', 'ollama/glm-5', 'ollama/gpt-oss:120b', 'ollama/kimi-k2.5',
+  'ollama/minimax-m2.5', 'ollama/minimax-m3', 'ollama/qwen3.5'
 ];
+
+// thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
+// É a fonte de verdade de quanto o modelo aceita raciocinar: um modelo
+// gemini-level não desliga o pensamento (canDisable=false); os com null não
+// expõem reasoning e só aceitam 'none'.
+const NINEROUTER_THINKING = {
+  'ag/claude-opus-4-6-thinking': 'claude-budget', 'ag/claude-sonnet-4-6': 'claude-adaptive',
+  'ag/gemini-3-flash': 'gemini-level', 'ag/gemini-3-flash-agent': 'gemini-level',
+  'ag/gemini-3.1-pro-low': 'gemini-level', 'ag/gemini-3.5-flash-extra-low': 'gemini-level',
+  'ag/gemini-3.5-flash-high': 'gemini-level', 'ag/gemini-3.5-flash-low': 'gemini-level',
+  'ag/gemini-3.6-flash-high': 'gemini-level', 'ag/gemini-3.6-flash-low': 'gemini-level',
+  'ag/gemini-3.6-flash-medium': 'gemini-level', 'ag/gemini-3.7-flash-high': 'gemini-level',
+  'ag/gemini-3.7-flash-low': 'gemini-level', 'ag/gemini-3.7-flash-medium': 'gemini-level',
+  'ag/gemini-pro-agent': null, 'ag/gpt-oss-120b-medium': 'openai',
+  'cx/gpt-5.3-codex-spark': 'openai', 'cx/gpt-5.3-codex-spark-review': 'openai',
+  'cx/gpt-5.4': 'openai', 'cx/gpt-5.4-mini': 'openai', 'cx/gpt-5.4-mini-review': 'openai',
+  'cx/gpt-5.4-review': 'openai', 'cx/gpt-5.5': 'openai', 'cx/gpt-5.5-review': 'openai',
+  'cx/gpt-5.6-luna': 'openai', 'cx/gpt-5.6-luna-review': 'openai', 'cx/gpt-5.6-sol': 'openai',
+  'cx/gpt-5.6-sol-review': 'openai', 'cx/gpt-5.6-terra': 'openai',
+  'cx/gpt-5.6-terra-review': 'openai',
+  'gc/gemini-2.5-flash': 'gemini-budget', 'gc/gemini-2.5-flash-lite': 'gemini-budget',
+  'gc/gemini-2.5-pro': 'gemini-budget', 'gc/gemini-3-flash-preview': 'gemini-level',
+  'gc/gemini-3-pro-preview': 'gemini-level', 'gc/gemini-3.1-flash-lite-preview': 'gemini-level',
+  'gc/gemini-3.1-pro-preview': 'gemini-level',
+  'kc/anthropic/claude-opus-4-20250514': 'claude-budget',
+  'kc/anthropic/claude-sonnet-4-20250514': 'claude-budget',
+  'kc/deepseek/deepseek-chat': null, 'kc/deepseek/deepseek-reasoner': 'deepseek',
+  'kc/google/gemini-2.5-flash': 'gemini-budget', 'kc/google/gemini-2.5-pro': 'gemini-budget',
+  'kc/openai/gpt-4.1': null, 'kc/openai/o3': 'openai',
+  'ollama/glm-4.7-flash': 'zai', 'ollama/glm-5': 'zai', 'ollama/gpt-oss:120b': 'openai',
+  'ollama/kimi-k2.5': 'kimi', 'ollama/minimax-m2.5': 'minimax',
+  'ollama/minimax-m3': 'minimax', 'ollama/qwen3.5': 'qwen'
+};
+
+// reasoning_effort aceito por família de thinkingFormat (coerente com o Hermes)
+const NINEROUTER_TF_ALLOWED = {
+  'gemini-level':    ['low', 'medium', 'high'],          // pensamento embutido no nível
+  'gemini-budget':   ['none', 'low', 'medium', 'high'],
+  'claude-adaptive': ['none', 'low', 'medium', 'high'],
+  'claude-budget':   ['none', 'low', 'medium', 'high'],
+  'openai':          ['low', 'medium', 'high', 'max'],
+  'deepseek':        ['low', 'medium', 'high'],
+  'kimi':            ['low', 'medium', 'high'],
+  'zai':             ['low', 'medium', 'high'],
+  'minimax':         ['low', 'medium', 'high'],
+  'qwen':            ['low', 'medium', 'high']
+};
+
+function ninerouterReasoning(id) {
+  const tf = NINEROUTER_THINKING[id] || null;
+  if (tf === null) return { allowed: ['none'], def: 'none' };
+  const allowed = NINEROUTER_TF_ALLOWED[tf] || ['none', 'low', 'medium', 'high', 'max'];
+  const def = allowed.length >= 2 ? allowed[allowed.length - 2] : allowed[0];
+  return { allowed, def };
+}
 
 function ninerouterName(id) {
   const [prefix, ...parts] = id.split('/');
@@ -160,12 +216,15 @@ function ninerouterName(id) {
 
 function buildNineRouterModel(id) {
   const model = buildModel(id);
+  const r = ninerouterReasoning(id);
   return {
     ...model,
     name: ninerouterName(id),
     badge: '9Router',
     free: false,
     requiresPatch: false,
+    allowedReasoning: r.allowed,
+    defaultReasoning: r.def,
     description: 'Disponível pelo 9Router do server-desktop; catálogo lido do endpoint autenticado da frota.'
   };
 }

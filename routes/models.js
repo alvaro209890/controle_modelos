@@ -137,11 +137,11 @@ const NINEROUTER_IDS = [
   'ag/gemini-3.6-flash-low', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.7-flash-high',
   'ag/gemini-3.7-flash-low', 'ag/gemini-3.7-flash-medium', 'ag/gemini-pro-agent',
   'ag/gpt-oss-120b-medium',
-  'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.5',
-  'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
+  'cx/gpt-5.4', 'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.4-review',
+  'cx/gpt-5.5', 'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
+  'cx/gpt-5.6-sol', 'cx/gpt-5.6-sol-review',
   'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
-  'ollama/gpt-oss:120b', 'ollama/minimax-m3',
-  'nvidia/minimaxai/minimax-m3'
+  'ollama/gpt-oss:120b', 'ollama/minimax-m3'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -157,12 +157,13 @@ const NINEROUTER_THINKING = {
   'ag/gemini-3.7-flash-high': 'gemini-level',
   'ag/gemini-3.7-flash-low': 'gemini-level', 'ag/gemini-3.7-flash-medium': 'gemini-level',
   'ag/gemini-pro-agent': null, 'ag/gpt-oss-120b-medium': 'openai',
-  'cx/gpt-5.4-mini': 'openai', 'cx/gpt-5.4-mini-review': 'openai',
+  'cx/gpt-5.4': 'openai', 'cx/gpt-5.4-mini': 'openai', 'cx/gpt-5.4-mini-review': 'openai',
+  'cx/gpt-5.4-review': 'openai',
   'cx/gpt-5.5': 'openai', 'cx/gpt-5.5-review': 'openai',
   'cx/gpt-5.6-luna': 'openai', 'cx/gpt-5.6-luna-review': 'openai',
+  'cx/gpt-5.6-sol': 'openai', 'cx/gpt-5.6-sol-review': 'openai',
   'cx/gpt-5.6-terra': 'openai', 'cx/gpt-5.6-terra-review': 'openai',
-  'ollama/gpt-oss:120b': 'openai', 'ollama/minimax-m3': 'minimax',
-  'nvidia/minimaxai/minimax-m3': 'openai'
+  'ollama/gpt-oss:120b': 'openai', 'ollama/minimax-m3': 'minimax'
 };
 
 // reasoning_effort aceito por família de thinkingFormat (coerente com o Hermes)

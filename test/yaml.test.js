@@ -96,7 +96,7 @@ check('recusa barra no fim', safeModel('a/') === null);
 
 console.log('\n== catálogo de provedores');
 const provs = models._fallbackProviders();
-check('5 provedores no catálogo estático', provs.length === 5, provs.map((p) => p.id).join(','));
+check('6 provedores no catálogo estático', provs.length === 6, provs.map((p) => p.id).join(','));
 check('openrouter presente na validação', provs.some((p) => p.id === 'openrouter'));
 check('preset de modelo OpenRouter resolve', (models.findModelPreset('deepseek/deepseek-v4-flash') || {}).provider === 'openrouter');
 check('id ambíguo respeita o provider informado',

@@ -96,7 +96,7 @@ async function probeHost(host) {
     return { online: true, latencyMs: 0 };
   }
   const start = Date.now();
-  const res = await runLocalCommand(`ssh ${SSH_MUX} -o ConnectTimeout=4 ${host} "echo ok"`, { timeout: 8000 });
+  const res = await runLocalCommand(`ssh ${SSH_MUX} -o ConnectTimeout=3 ${host} "echo ok"`, { timeout: 4000 });
   const latencyMs = Date.now() - start;
   return {
     online: res.success && res.stdout.includes('ok'),

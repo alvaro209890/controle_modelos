@@ -69,6 +69,14 @@ async function probeWindows(paths) {
 }
 
 async function probeHostRuntime(pc, paths) {
+  if (pc !== 'server') {
+    const { probeHost } = require('./sshRunner');
+    const probe = await probeHost(pc);
+    if (!probe.online) {
+      return { gatewayStartedAt: null, mtimes: {}, hostOffline: true, error: probe.error };
+    }
+  }
+
   const cached = cache.get(pc);
   if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
 

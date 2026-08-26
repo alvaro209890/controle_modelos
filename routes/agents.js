@@ -172,6 +172,7 @@ router.get('/', wrap(async (req, res) => {
         return {
           ...base,
           online: false,
+          hostOffline: !!readRes.hostOffline,
           error: readRes.error,
           model: null,
           provider: null,

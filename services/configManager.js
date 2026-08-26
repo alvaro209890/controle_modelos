@@ -18,7 +18,17 @@ async function readRawConfig(pc, configPath) {
     }
   }
 
-  // Se for host remoto
+  // Se for host remoto, testa conexão primeiro para evitar travar ou soltar erro bruto de SSH
+  const { probeHost } = require('./sshRunner');
+  const probe = await probeHost(pc);
+  if (!probe.online) {
+    return {
+      success: false,
+      hostOffline: true,
+      error: `Computador ${pc} está offline / desligado (${probe.error || 'timeout SSH'})`
+    };
+  }
+
   const cmd = pc === 'windows'
     ? `powershell -NoProfile -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Content -Raw -Encoding UTF8 '${configPath}'"`
     : `cat "${configPath}"`;
@@ -34,6 +44,18 @@ async function readRawConfig(pc, configPath) {
  */
 async function writeRawConfig(pc, configPath, newContent) {
   const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+
+  if (pc !== 'server') {
+    const { probeHost } = require('./sshRunner');
+    const probe = await probeHost(pc);
+    if (!probe.online) {
+      return {
+        success: false,
+        hostOffline: true,
+        error: `Computador ${pc} está offline / desligado (${probe.error || 'timeout SSH'})`
+      };
+    }
+  }
 
   if (pc === 'server') {
     try {

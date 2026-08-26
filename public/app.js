@@ -343,6 +343,11 @@ function updateHostStatusUI() {
 
     if (h.online) onlineCount++;
 
+    const col = document.getElementById('col-' + hostKey);
+    if (col) {
+      col.classList.toggle('host-offline-column', !h.online);
+    }
+
     const badge = document.getElementById('status-badge-' + hostKey);
     const gwEl = document.getElementById('gw-' + hostKey);
 
@@ -425,7 +430,8 @@ function renderAgentsByHost(pc) {
 
   agents.forEach((agent) => {
     const card = document.createElement('div');
-    card.className = 'agent-card';
+    const hostIsOff = isHostOffline(agent.pc) || agent.hostOffline;
+    card.className = 'agent-card' + (hostIsOff ? ' card-host-offline' : '');
     card.id = 'card-' + agent.id;
     card.dataset.name = (agent.name + ' ' + agent.channel + ' ' + agent.profile + ' ' + (agent.model || '')).toLowerCase();
 
@@ -528,10 +534,18 @@ function renderAgentsByHost(pc) {
  * Faixa de estado do agente: erro de leitura, chaves faltando no YAML e — o principal —
  * o aviso de "gravado mas ainda não aplicado" com o botão de aplicar.
  */
+function isHostOffline(pc) {
+  const h = fleetData.hosts[pc];
+  return !!(h && h.online === false);
+}
+
 function buildAgentStatusRow(agent) {
   const rows = [];
 
-  if (agent.error) {
+  const hostIsOff = isHostOffline(agent.pc) || agent.hostOffline;
+  if (hostIsOff) {
+    rows.push(`<div class="agent-alert alert-offline">🔌 PC <strong>${esc(agent.pcName || agent.pc)}</strong> está desligado / offline na malha.</div>`);
+  } else if (agent.error) {
     rows.push(`<div class="agent-alert alert-error">⚠️ ${esc(agent.error)}</div>`);
   }
 
@@ -817,6 +831,12 @@ async function saveAgentModel(pc, profile, agentId, opts = {}) {
   const providerSelect = document.getElementById('sel-provider-' + agentId);
   const btn = document.getElementById('btn-save-' + agentId);
 
+  if (isHostOffline(pc)) {
+    setCardResult(agentId, 'err', `Não é possível salvar: o computador ${pc} está offline / desligado.`);
+    showToast(`Computador ${pc} está offline / desligado.`, 'error');
+    return;
+  }
+
   const model = modelSelect ? modelSelect.value : null;
   const reasoningEffort = reasoningSelect ? reasoningSelect.value : null;
   const provider = providerSelect ? providerSelect.value : null;
@@ -965,6 +985,11 @@ async function runBatchModel() {
 }
 
 async function testAgent(pc, profile) {
+  if (isHostOffline(pc)) {
+    showToast(`Não é possível testar: o computador ${pc} está offline / desligado.`, 'error');
+    return;
+  }
+
   openModal('modal-test');
   document.getElementById('test-modal-title').textContent = '🧪 Teste de Conexão: ' + pc + ' / ' + profile;
   document.getElementById('test-spinner').classList.remove('hidden');
@@ -986,6 +1011,11 @@ async function testAgent(pc, profile) {
 }
 
 async function restartHost(pc, opts = {}) {
+  if (isHostOffline(pc)) {
+    showToast(`Não é possível reiniciar o gateway: o computador ${pc} está offline / desligado.`, 'error');
+    return;
+  }
+
   if (!opts.skipConfirm && !confirm('Reiniciar o Hermes Gateway no host "' + pc + '"?\n\nTodos os agentes desse PC ficam alguns segundos fora do ar e voltam já com a configuração nova.')) return;
 
   try {
@@ -1028,6 +1058,11 @@ async function restartAllFleet() {
 }
 
 async function healHost(pc) {
+  if (isHostOffline(pc)) {
+    showToast(`Não é possível curar perfis: o computador ${pc} está offline / desligado.`, 'error');
+    return;
+  }
+
   try {
     showToast('Executando cura de perfis em ' + pc + '...', 'info');
     const data = await apiFetch('/api/fleet/heal/' + pc, { method: 'POST' });
@@ -1054,6 +1089,11 @@ async function healAllFleet() {
 }
 
 async function openLogs(pc) {
+  if (isHostOffline(pc)) {
+    showToast(`Não é possível abrir logs: o computador ${pc} está offline / desligado.`, 'error');
+    return;
+  }
+
   fleetData.currentLogHost = pc;
   const drawer = document.getElementById('drawer-logs');
   const title = document.getElementById('drawer-logs-title');

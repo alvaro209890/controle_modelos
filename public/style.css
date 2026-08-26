@@ -1079,6 +1079,43 @@ select.form-control {
   font-size: 0.72rem;
 }
 
+.alert-offline {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.agent-card.card-host-offline {
+  border-color: rgba(239, 68, 68, 0.35);
+  background-color: rgba(15, 23, 42, 0.6);
+}
+
+.agent-card.card-host-offline .agent-selectors {
+  opacity: 0.65;
+}
+
+.agent-card.card-host-offline .btn-save,
+.agent-card.card-host-offline .btn-test {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agent-card.card-host-offline .btn-save:hover,
+.agent-card.card-host-offline .btn-test:hover {
+  filter: none;
+}
+
+.host-column.host-offline-column {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.host-column.host-offline-column .host-header {
+  border-bottom-color: rgba(239, 68, 68, 0.3);
+}
+
 .alert-error {
   background-color: var(--danger-bg);
   border-color: rgba(239, 68, 68, 0.4);

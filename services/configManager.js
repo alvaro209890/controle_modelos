@@ -42,8 +42,14 @@ async function writeRawConfig(pc, configPath, newContent) {
         fs.copyFileSync(configPath, backupPath);
       }
       // grava em tmp e move: se o processo morrer no meio, o config original continua íntegro
+      // Preserva o modo do arquivo: writeFileSync cria com 0644/0664 (umask) e o rename levava
+      // o config.yaml de 0600 para 0664 - alargando a permissao de um arquivo que guarda
+      // provider/base_url e campos api_key. Comprovado nos backups de 2026-08-24.
+      let originalMode = null;
+      try { originalMode = fs.statSync(configPath).mode & 0o7777; } catch {}
       const tmpPath = `${configPath}.tmp-controle-${timestamp}`;
       fs.writeFileSync(tmpPath, newContent, 'utf8');
+      if (originalMode !== null) fs.chmodSync(tmpPath, originalMode);
       fs.renameSync(tmpPath, configPath);
       return { success: true, backupPath };
     } catch (e) {

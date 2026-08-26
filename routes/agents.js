@@ -154,11 +154,17 @@ router.get('/', wrap(async (req, res) => {
       const staleProcess = !!(configMtime && rt.gatewayStartedAt && configMtime > rt.gatewayStartedAt);
       const base = {
         ...agent,
-        pendingRestart: staleProcess || panelState.isPendingRestart(agent.id, agent.pc),
+        // O runtimeProbe e a verdade: quando da para ler a hora em que o gateway subiu, ela
+        // decide sozinha. O carimbo do painel (panelState) so conhece os restarts feitos POR
+        // AQUI \u2014 um `systemctl --user restart` na mao nunca o limpava, e o selo "pendente"
+        // ficava aceso para sempre (server/geoforest, acompanhamento e wms em 2026-08-24:
+        // config de 22:57:12, gateway de 22:57:17, ainda assim marcados como pendentes).
+        pendingRestart: rt.gatewayStartedAt ? staleProcess : panelState.isPendingRestart(agent.id, agent.pc),
         configMtime,
         gatewayStartedAt: rt.gatewayStartedAt,
         lastWriteAt: panelState.getWrittenAt(agent.id) || configMtime,
-        lastRestartAt: panelState.getRestartedAt(agent.pc) || rt.gatewayStartedAt
+        // Reinicio mais recente entre o que o painel fez e o que o host reporta
+        lastRestartAt: Math.max(panelState.getRestartedAt(agent.pc) || 0, rt.gatewayStartedAt || 0) || null
       };
 
       const readRes = await readRawConfig(agent.pc, agent.configPath);

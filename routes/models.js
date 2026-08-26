@@ -116,7 +116,7 @@ function prettyName(id) {
 function describeModel(id, meta) {
   const parts = [];
   if (meta.free) parts.push('⭐ GRÁTIS (US$0).');
-  if (meta.ctx) parts.push(`Contexto ${meta.ctx >= 1000000 ? (meta.ctx/1000000) + 'M' : (meta.ctx/1000) + 'K'} tokens; saída máx ${meta.out ? (meta.out/1000) + 'K' : '?'}.`);
+  if (meta.ctx) parts.push(`Contexto ${meta.ctx >= 1000000 ? Math.round(meta.ctx/100000)/10 + 'M' : Math.round(meta.ctx/1000) + 'K'} tokens; saída máx ${meta.out ? Math.round(meta.out/1000) + 'K' : '?'}.`);
   else parts.push('Contexto como definido pelo relay.');
   if (meta.in !== undefined && !meta.free) parts.push(`Custo US$${fmt(meta.in)}/M in, US$${fmt(meta.outCost)}/M out.`);
   return parts.join(' ');
@@ -124,6 +124,51 @@ function describeModel(id, meta) {
 
 // ids gratuitos do OpenCode "normal" (/zen/v1), validados em HTTP 200
 const ZEN_FREE_IDS = ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'];
+
+// Catálogo medido no endpoint do 9Router do server-desktop. Não inclui uma
+// lista teórica: cada id abaixo foi retornado por GET /v1/models em 26/08/2026.
+// O serviço fica acessível apenas pela malha Tailscale da frota.
+const NINEROUTER_URL = 'http://100.65.138.58:20128/v1';
+const NINEROUTER_IDS = [
+  'ag/gemini-3.7-flash-high', 'ag/gemini-3.7-flash-medium', 'ag/gemini-3.7-flash-low',
+  'ag/gemini-3.6-flash-high', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.5-flash-high',
+  'ag/gemini-3-flash-agent', 'ag/gemini-3.5-flash-low', 'ag/gemini-3.5-flash-extra-low',
+  'ag/gemini-pro-agent', 'ag/gemini-3.1-pro-low', 'ag/claude-sonnet-4-6',
+  'ag/claude-opus-4-6-thinking', 'ag/gpt-oss-120b-medium', 'ag/gemini-3-flash',
+  'gc/gemini-3.1-pro-preview', 'gc/gemini-3-pro-preview', 'gc/gemini-3-flash-preview',
+  'gc/gemini-3.1-flash-lite-preview', 'gc/gemini-2.5-pro', 'gc/gemini-2.5-flash',
+  'gc/gemini-2.5-flash-lite', 'kc/anthropic/claude-sonnet-4-20250514',
+  'kc/anthropic/claude-opus-4-20250514', 'kc/google/gemini-2.5-pro',
+  'kc/google/gemini-2.5-flash', 'kc/openai/gpt-4.1', 'kc/openai/o3',
+  'kc/deepseek/deepseek-chat', 'kc/deepseek/deepseek-reasoner',
+  'cx/gpt-5.6-sol', 'cx/gpt-5.6-sol-review', 'cx/gpt-5.6-terra',
+  'cx/gpt-5.6-terra-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
+  'cx/gpt-5.5', 'cx/gpt-5.5-review', 'cx/gpt-5.4', 'cx/gpt-5.4-review',
+  'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.3-codex-spark',
+  'cx/gpt-5.3-codex-spark-review', 'ollama/gpt-oss:120b', 'ollama/kimi-k2.5',
+  'ollama/glm-5', 'ollama/minimax-m2.5', 'ollama/glm-4.7-flash', 'ollama/qwen3.5',
+  'ollama/minimax-m3'
+];
+
+function ninerouterName(id) {
+  const [prefix, ...parts] = id.split('/');
+  const source = {
+    ag: 'Antigravity', gc: 'Gemini CLI', kc: 'KiloCode', cx: 'Codex', ollama: 'Ollama'
+  }[prefix] || prefix;
+  return source + ' — ' + parts.join('/');
+}
+
+function buildNineRouterModel(id) {
+  const model = buildModel(id);
+  return {
+    ...model,
+    name: ninerouterName(id),
+    badge: '9Router',
+    free: false,
+    requiresPatch: false,
+    description: 'Disponível pelo 9Router do server-desktop; catálogo lido do endpoint autenticado da frota.'
+  };
+}
 
 // ── consulta viva ao relay opencode-go ───────────────────────────────────────
 let liveCache = { ts: 0, ids: [] };
@@ -267,6 +312,16 @@ function providerList(goIds) {
         { ...buildModel('deepseek-v4-pro'), name: 'DeepSeek V4 Pro (Oficial)', badge: 'DeepSeek Oficial', description: 'Modelo oficial com tarifação por token na API da DeepSeek.' },
         { ...buildModel('deepseek-v4-flash'), name: 'DeepSeek V4 Flash (Oficial)', badge: 'DeepSeek Oficial', description: 'Variante Flash na API oficial da DeepSeek, mais rápida e econômica.' }
       ]
+    },
+    {
+      id: 'ninerouter',
+      name: '9Router (Frota)',
+      baseUrl: NINEROUTER_URL,
+      keyEnv: 'NINEROUTER_API_KEY',
+      availableOn: ['server', 'acer', 'windows'],
+      badge: 'Tailscale · ' + NINEROUTER_IDS.length + ' modelos',
+      description: 'Gateway OpenAI-compatible do server-desktop, disponível nos 13 perfis Hermes pela malha privada Tailscale. Mostra somente os modelos atualmente liberados pelo 9Router.',
+      models: NINEROUTER_IDS.map(buildNineRouterModel)
     },
     {
       id: 'openrouter',

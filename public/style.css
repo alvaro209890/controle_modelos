@@ -359,6 +359,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  min-width: 0;
   transition: border-color 0.2s;
 }
 
@@ -404,8 +405,9 @@ body {
 
 .agent-selectors {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .agent-selectors-3col {
@@ -426,6 +428,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .selector-group label {
@@ -444,6 +447,14 @@ body {
   font-size: 0.8rem;
   outline: none;
   font-family: var(--font-main);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+select.form-control {
+  text-overflow: ellipsis;
 }
 
 .form-control:focus {

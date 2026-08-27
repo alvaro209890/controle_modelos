@@ -138,6 +138,21 @@ const FLEET_AGENTS = [
     envPath: '/home/acer/.hermes/profiles/solicitacoes/.env',
     description: 'Rascunhos de e-mails, despachos e triagem Outlook'
   },
+  {
+    id: 'acer-videos',
+    pc: 'acer',
+    pcName: 'acer-Aspire-A515-45',
+    profile: 'videos',
+    name: 'Vídeos (Acer)',
+    channel: '🎬｜videos',
+    channelId: '1542584425546514562',
+    guildId: '1528545203869450381',
+    guildName: 'Hermes Acer',
+    isRoot: false,
+    configPath: '/home/acer/.hermes/profiles/videos/config.yaml',
+    envPath: '/home/acer/.hermes/profiles/videos/.env',
+    description: 'Roteiro, criação, análise e dublagem de vídeos'
+  },
 
   // windows (remoto via ssh windows)
   {

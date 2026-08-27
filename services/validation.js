@@ -1,7 +1,9 @@
 const SAFE_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
-// Ids de modelo podem ser namespaced (OpenRouter: `deepseek/deepseek-v4-flash`).
+// Ids de modelo podem ser namespaced (OpenRouter: `deepseek/deepseek-v4-flash`)
+// e versionados com `:` (Ollama: `ollama/gpt-oss:120b`).
 // Sem a `/` liberada aqui, TODO modelo do OpenRouter era recusado com 400 no salvar.
-const MODEL_RE = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
+// Sem o `:` liberado, modelos Ollama com tag (:120b, :latest) também eram recusados.
+const MODEL_RE = /^[a-zA-Z0-9][a-zA-Z0-9._/:-]*$/;
 const REASONING_LEVELS = new Set(['none', 'low', 'medium', 'high', 'max']);
 const KNOWN_PCS = new Set(['server', 'acer', 'windows']);
 

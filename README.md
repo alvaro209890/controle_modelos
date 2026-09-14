@@ -1,13 +1,13 @@
 # Controle de Modelos Hermes — Painel de Gestão da Frota
 
-Painel web centralizado e sem autenticação para monitoramento, controle granular e em lote de modelos de IA (`model.default`, `provider`, `reasoning_effort`), teste de conectividade e reinício independente dos 13 agentes Hermes distribuídos nos 3 computadores da frota do Álvaro.
+Painel web centralizado e sem autenticação para monitoramento, controle granular e em lote de modelos de IA (`model.default`, `provider`, `reasoning_effort`), teste de conectividade e reinício independente dos 14 agentes Hermes distribuídos nos 3 computadores da frota do Álvaro.
 
 ---
 
 ## 🎯 Objetivo do Projeto
 
 Permitir que o Álvaro (ou qualquer agente autorizado) visualize e configure em tempo real, através de uma interface web simples e direta:
-1. **O modelo de IA de cada um dos 13 agentes Discord** nos 3 computadores (`server-desktop`, `acer`, `windows`).
+1. **O modelo de IA de cada um dos 14 agentes Discord** nos 3 computadores (`server-desktop`, `acer`, `windows`).
 2. **O nível de raciocínio (*reasoning effort*)** de cada perfil (`none`, `low`, `medium`, `high`, `max`) — sempre restrito ao que o **modelo selecionado** aceita.
 3. **Catálogo hierárquico Provider → Model → Reasoning**: primeiro escolhe-se o **provedor**, então aparecem apenas os **modelos disponíveis naquele provedor**, e então os **níveis de reasoning que aquele modelo aceita**.
 4. **Validação por credencial**: cada provedor declara em quais PCs tem chave (`availableOn`); o painel impede salvar um modelo de provedor sem credencial naquela máquina.
@@ -56,12 +56,12 @@ que ids namespaced do OpenRouter (`fornecedor/modelo`) passam pela validação.
 
 ---
 
-## 🗺️ Mapa Rápido da Frota (3 PCs / 13 Agentes)
+## 🗺️ Mapa Rápido da Frota (3 PCs / 14 Agentes)
 
 | Computador | Host / Alias SSH | SO / Hermes Home | Agentes / Perfis (Discord) |
 |---|---|---|---|
 | **server-desktop** *(Host do Site e API)* | `localhost` / `sd` | Linux Ubuntu<br>`/home/server/.hermes` | • `default` (🖥️｜hermes-server-desktop)<br>• `geoforest` (🌲｜geoforest)<br>• `acompanhamento` (📁｜acompanhamento)<br>• `wms` (🗺️｜wms) |
-| **acer** | `acer` (`100.102.202.63`) | Linux Ubuntu<br>`/home/acer/.hermes` | • `default` (💻｜hermes-acer)<br>• `trello` (📋｜trello-simcar)<br>• `acompanhamento` (📁｜acompanhamento)<br>• `geoforest` (🌲｜geoforest)<br>• `solicitacoes` (✉️｜solicitacoes) |
+| **acer** | `acer` (`100.102.202.63`) | Linux Ubuntu<br>`/home/acer/.hermes` | • `default` (💻｜hermes-acer)<br>• `trello` (📋｜trello-simcar)<br>• `acompanhamento` (📁｜acompanhamento)<br>• `geoforest` (🌲｜geoforest)<br>• `solicitacoes` (✉️｜solicitacoes)<br>• `videos` (🎬｜videos) |
 | **windows** | `windows` (`100.102.60.73`) | Windows 10/11<br>`C:\Users\Usuario\AppData\Local\hermes` | • `default` (🪟｜hermes-windows)<br>• `cartografo` (🗺️｜cartografo)<br>• `documentos` (📄｜documentos)<br>• `zelador` (🧹｜zelador) |
 
 ---
@@ -110,35 +110,21 @@ Esta pasta foi estruturada com planos e especificações detalhadas para que qua
 
 ## 📦 Catálogo de Modelos
 
-O catálogo é **hierárquico** (Provider → Model → Reasoning). Atualizado em 2026-08-23:
+O catálogo é **hierárquico** (Provider → Model → Reasoning). Em 14/09/2026, todos os modelos anunciados foram testados com um POST real e saíram do painel os provedores sem nenhum modelo utilizável.
 
 | Provider | Chave (PCs) | Modelos |
 |---|---|---|
-| **opencode-go** | `OPENCODE_GO_API_KEY` (3 PCs) | **29 modelos** — lista **consultada ao vivo no relay** (GET /models, cache 5 min, com fallback em lista embutida). Só `ox-alpha-free` é **GRÁTIS** ($0); os demais exibem custo $/M e contexto de tokens no rótulo/front. |
-| **opencode-zen** | `OPENCODE_ZEN_API_KEY` (3 PCs) | **6 modelos GRATUITOS** do OpenCode normal (`/zen/v1`), todos validados em HTTP 200: hy3-free, mimo-v2.5-free, laguna-s-2.1-free, nemotron-3.5-lightning-free, nemotron-3-ultra-free, big-pickle |
-| **xai-oauth** | `XAI_API_KEY`/SuperGrok (server, acer) | grok-4.6 |
-| **deepseek-standard** | `DEEPSEEK_API_KEY` (3 PCs) | deepseek-v4-pro, deepseek-v4-flash (API oficial) |
-| **openrouter** | `OPENROUTER_API_KEY` (server, acer) | **8 curados** (bons e baratos p/ código) |
+| **ninerouter** | `NINEROUTER_API_KEY` (3 PCs) | **29 modelos aprovados**: Antigravity 3.8/3.7/3.6 e afins, Codex 6/5.6/5.5 e `ollama/gpt-oss:120b`. |
+| **openrouter** | `OPENROUTER_API_KEY` (server, acer) | **8 modelos aprovados** por POST real. |
 
-Cada modelo carrega no front: **contexto de tokens** (ex.: `1M`, `262K`) e **se é grátis ou o custo**
-$/M (US$ de entrada/saída), vindos do catálogo oficial do CLI opencode.
+Removidos por indisponibilidade atual: OpenCode Go (37/37 falharam por saldo insuficiente),
+OpenCode Zen (6/6 recusados), xAI OAuth (`grok-4.6`, token recusado) e DeepSeek oficial
+(2/2 sem saldo). No 9Router também ficaram fora KiloCode, Codex 5.4/5.3, modelos Ollama
+retirados/pagos e `ag/gemini-3.5-flash-high`.
 
-> **Gratuitos do OpenCode normal (ZEN):** além do `ox-alpha-free` (opencode-go), o OpenCode expõe
-> outros modelos **grátis** no endpoint `/zen/v1`. Testados ao vivo em 2026-08-24 (HTTP 200):
-> `hy3-free`, `mimo-v2.5-free`, `laguna-s-2.1-free`, `nemotron-3.5-lightning-free`,
-> `nemotron-3-ultra-free` e `big-pickle`. Eles vivem no provider `opencode-zen`
-> (`OPENCODE_ZEN_API_KEY` = mesma valor da `OPENCODE_GO_API_KEY`, configurada nos 3 PCs). Os demais
-> `*-free` do catálogo zen (deepseek-v4-flash-free, kimi-k2.5-free, minimax-m3-free, etc.) retornam
-> "not supported"/"unavailable" e **não** foram incluídos.
-
-> **Atualização automática:** o endpoint `GET /api/models/providers` consulta o relay
-> `opencode.ai/zen/go/v1/models` **ao vivo** (com cache de 5 min). Se a OpenCode adicionar/remover
-> modelos, o painel reflete sozinho em menos de 5 min — sem precisar mexer no código. Se a consulta
-> falhar, cai na lista base embutida (os 29 atuais).
-
-O reasoning de cada modelo é restrito ao que ele realmente aceita (ex.: `ox-alpha-free` → `low|high|max`;
-`glm-5.2` → `high|max`; `hy3` → `none|low|high`; família deepseek → `none..max`), conforme o plugin
-`opencode-zen` do Hermes. No OpenRouter os preços (USD/M tokens) ficam no badge de cada modelo.
+O reasoning de cada modelo é restrito ao que o `thinkingFormat` do 9Router aceita. Para
+`ag/gemini-3.8-flash-high`, a escada real é `low|medium|high` e o padrão do painel é **high**.
+No OpenRouter os preços (USD/M tokens) ficam no badge de cada modelo.
 
 ## 📱 Mobile
 
@@ -150,7 +136,7 @@ labels de provider/modelo legíveis.
 
 ### 🔽 Layout retrátil (accordion — 2026-08-23)
 
-Para não rolar 13 cards abertos no celular, tudo é **retrátil**:
+Para não rolar 14 cards abertos no celular, tudo é **retrátil**:
 
 | Elemento | Interação |
 |---|---|

@@ -134,7 +134,7 @@ async function applyToAgent(agent, payload) {
 
 /**
  * GET /api/agents
- * Retorna os 13 agentes com seus dados de configuração lidos em tempo real
+ * Retorna os 14 agentes com seus dados de configuração lidos em tempo real
  */
 router.get('/', wrap(async (req, res) => {
   // Uma sondagem por host: quando o gateway subiu + mtime de cada config.yaml.

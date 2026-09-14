@@ -96,11 +96,22 @@ check('recusa barra no fim', safeModel('a/') === null);
 
 console.log('\n== catálogo de provedores');
 const provs = models._fallbackProviders();
-check('6 provedores no catálogo estático', provs.length === 6, provs.map((p) => p.id).join(','));
+check('só os 2 provedores funcionais no catálogo', provs.length === 2, provs.map((p) => p.id).join(','));
+check('provedores mortos foram removidos',
+  !provs.some((p) => ['opencode-go', 'opencode-zen', 'xai-oauth', 'deepseek-standard'].includes(p.id)),
+  provs.map((p) => p.id).join(','));
 check('openrouter presente na validação', provs.some((p) => p.id === 'openrouter'));
 check('preset de modelo OpenRouter resolve', (models.findModelPreset('deepseek/deepseek-v4-flash') || {}).provider === 'openrouter');
-check('id ambíguo respeita o provider informado',
-  models.findModelPreset('deepseek-v4-pro', 'deepseek-standard').provider === 'deepseek-standard');
+const nr = provs.find((p) => p.id === 'ninerouter');
+check('9Router tem exatamente os 29 modelos aprovados', nr && nr.models.length === 29, nr && nr.models.length);
+const gemini38 = models.findModelPreset('ag/gemini-3.8-flash-high', 'ninerouter');
+check('Gemini 3.8 Flash High existe no 9Router', !!gemini38);
+check('Gemini 3.8 aceita low, medium e high',
+  gemini38 && JSON.stringify(gemini38.allowedReasoning) === JSON.stringify(['low', 'medium', 'high']),
+  gemini38 && JSON.stringify(gemini38.allowedReasoning));
+check('Gemini 3.8 usa high como padrão', gemini38 && gemini38.defaultReasoning === 'high', gemini38 && gemini38.defaultReasoning);
+check('modelos reprovados não aparecem no 9Router',
+  nr && !nr.models.some((m) => ['cx/gpt-5.4', 'cx/gpt-5.3-codex-spark', 'ollama/minimax-m3', 'ag/gemini-3.5-flash-high'].includes(m.id)));
 
 console.log('\n' + (failures === 0 ? '✅ todos os testes passaram' : `❌ ${failures} falha(s)`));
 process.exit(failures === 0 ? 0 : 1);

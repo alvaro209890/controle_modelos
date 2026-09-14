@@ -4,12 +4,10 @@ const router = express.Router();
 /**
  * CATÁLOGO HIERÁRQUICO: Provider → Model → (allowedReasoning, defaultReasoning, contexto, custo, free)
  *
- * oprocotocolo opencode-go consulta o relay AO VIVO (GET /models) a cada N minutos para que a
- * lista se atualize sozinha quando novos modelos aparecerem. Caso a consulta falhe, cai na
- * lista base embutida abaixo. Os metadados (contexto/custo/free/reasoning) vêm do catálogo do
- * CLI opencode e do plugin opencode-zen do Hermes (verificado 2026-08-23).
- *
- * free = custo $0 (provedor opencode-go). No catálogo atual só `ox-alpha-free` é free.
+ * O painel mostra apenas modelos que responderam HTTP 200 numa auditoria real recente.
+ * Em 14/09/2026 foram testados os seis provedores anteriormente expostos; só 9Router e
+ * OpenRouter conservaram modelos utilizáveis. Metadados de reasoning do 9Router vêm do
+ * `thinkingFormat` retornado pelo endpoint autenticado `/v1/models`.
  */
 
 const OP = 'https://opencode.ai/zen/go/v1';
@@ -125,23 +123,24 @@ function describeModel(id, meta) {
 // ids gratuitos do OpenCode "normal" (/zen/v1), validados em HTTP 200
 const ZEN_FREE_IDS = ['hy3-free', 'mimo-v2.5-free', 'laguna-s-2.1-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free', 'big-pickle'];
 
-// Catálogo dos modelos do 9Router do server-desktop que respondem HTTP 200 em
-// teste real (26/08/2026). Gemini CLI (gc/) e KiloCode (kc/) foram removidos pelo
-// Álvaro; os IDs abaixos são só os que passaram num POST de verdade (os que davam
-// 400/402/404/410/403 ficaram de fora). O serviço é acessível só pela malha Tailscale.
+// Catálogo dos modelos do 9Router do server-desktop que responderam HTTP 200 em
+// teste real em 14/09/2026. O /v1/models declarava 50 IDs; somente estes 29 passaram
+// no POST /v1/chat/completions. KiloCode (sem crédito), Codex 5.4/5.3, modelos Ollama
+// retirados/pagos e Gemini 3.5 Flash High ficaram de fora.
 const NINEROUTER_URL = 'http://100.65.138.58:20128/v1';
 const NINEROUTER_IDS = [
-  'ag/claude-opus-4-6-thinking', 'ag/claude-sonnet-4-6', 'ag/gemini-3-flash',
-  'ag/gemini-3-flash-agent', 'ag/gemini-3.1-pro-low', 'ag/gemini-3.5-flash-extra-low',
-  'ag/gemini-3.5-flash-low', 'ag/gemini-3.6-flash-high',
-  'ag/gemini-3.6-flash-low', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.7-flash-high',
-  'ag/gemini-3.7-flash-low', 'ag/gemini-3.7-flash-medium', 'ag/gemini-pro-agent',
-  'ag/gpt-oss-120b-medium',
-  'cx/gpt-5.4', 'cx/gpt-5.4-mini', 'cx/gpt-5.4-mini-review', 'cx/gpt-5.4-review',
+  'ag/gemini-3.8-flash-high', 'ag/gemini-3.8-flash-medium',
+  'ag/gemini-3.8-flash-low', 'ag/gemini-3.8-flash',
+  'ag/gemini-3.7-flash-high', 'ag/gemini-3.7-flash-medium', 'ag/gemini-3.7-flash-low',
+  'ag/gemini-3.6-flash-high', 'ag/gemini-3.6-flash-medium', 'ag/gemini-3.6-flash-low',
+  'ag/gemini-3.5-flash-low', 'ag/gemini-3.5-flash-extra-low',
+  'ag/gemini-3-flash', 'ag/gemini-3-flash-agent', 'ag/gemini-3.1-pro-low',
+  'ag/gemini-pro-agent', 'ag/claude-opus-4-6-thinking', 'ag/claude-sonnet-4-6',
+  'ag/gpt-oss-120b-medium', 'cx/gpt-6-astra',
   'cx/gpt-5.5', 'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
   'cx/gpt-5.6-sol', 'cx/gpt-5.6-sol-review',
   'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
-  'ollama/gpt-oss:120b', 'ollama/minimax-m3'
+  'ollama/gpt-oss:120b'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -149,21 +148,21 @@ const NINEROUTER_IDS = [
 // gemini-level não desliga o pensamento (canDisable=false); os com null não
 // expõem reasoning e só aceitam 'none'.
 const NINEROUTER_THINKING = {
-  'ag/claude-opus-4-6-thinking': 'claude-budget', 'ag/claude-sonnet-4-6': 'claude-adaptive',
-  'ag/gemini-3-flash': 'gemini-level', 'ag/gemini-3-flash-agent': 'gemini-level',
-  'ag/gemini-3.1-pro-low': 'gemini-level', 'ag/gemini-3.5-flash-extra-low': 'gemini-level',
-  'ag/gemini-3.5-flash-low': 'gemini-level', 'ag/gemini-3.6-flash-high': 'gemini-level',
+  'ag/gemini-3.8-flash-high': 'gemini-level', 'ag/gemini-3.8-flash-medium': 'gemini-level',
+  'ag/gemini-3.8-flash-low': 'gemini-level', 'ag/gemini-3.8-flash': 'gemini-level',
+  'ag/gemini-3.7-flash-high': 'gemini-level', 'ag/gemini-3.7-flash-medium': 'gemini-level',
+  'ag/gemini-3.7-flash-low': 'gemini-level', 'ag/gemini-3.6-flash-high': 'gemini-level',
   'ag/gemini-3.6-flash-low': 'gemini-level', 'ag/gemini-3.6-flash-medium': 'gemini-level',
-  'ag/gemini-3.7-flash-high': 'gemini-level',
-  'ag/gemini-3.7-flash-low': 'gemini-level', 'ag/gemini-3.7-flash-medium': 'gemini-level',
-  'ag/gemini-pro-agent': null, 'ag/gpt-oss-120b-medium': 'openai',
-  'cx/gpt-5.4': 'openai', 'cx/gpt-5.4-mini': 'openai', 'cx/gpt-5.4-mini-review': 'openai',
-  'cx/gpt-5.4-review': 'openai',
+  'ag/gemini-3.5-flash-low': 'gemini-level', 'ag/gemini-3.5-flash-extra-low': 'gemini-level',
+  'ag/gemini-3-flash': 'gemini-level', 'ag/gemini-3-flash-agent': 'gemini-level',
+  'ag/gemini-3.1-pro-low': 'gemini-level', 'ag/gemini-pro-agent': null,
+  'ag/claude-opus-4-6-thinking': 'claude-budget', 'ag/claude-sonnet-4-6': 'claude-adaptive',
+  'ag/gpt-oss-120b-medium': 'openai', 'cx/gpt-6-astra': 'openai',
   'cx/gpt-5.5': 'openai', 'cx/gpt-5.5-review': 'openai',
   'cx/gpt-5.6-luna': 'openai', 'cx/gpt-5.6-luna-review': 'openai',
   'cx/gpt-5.6-sol': 'openai', 'cx/gpt-5.6-sol-review': 'openai',
   'cx/gpt-5.6-terra': 'openai', 'cx/gpt-5.6-terra-review': 'openai',
-  'ollama/gpt-oss:120b': 'openai', 'ollama/minimax-m3': 'minimax'
+  'ollama/gpt-oss:120b': 'openai'
 };
 
 // reasoning_effort aceito por família de thinkingFormat (coerente com o Hermes)
@@ -184,7 +183,10 @@ function ninerouterReasoning(id) {
   const tf = NINEROUTER_THINKING[id] || null;
   if (tf === null) return { allowed: ['none'], def: 'none' };
   const allowed = NINEROUTER_TF_ALLOWED[tf] || ['none', 'low', 'medium', 'high', 'max'];
-  const def = allowed.length >= 2 ? allowed[allowed.length - 2] : allowed[0];
+  // Gemini aceita low|medium|high; o padrão do painel deve ser o teto real, high.
+  const def = tf === 'gemini-level'
+    ? allowed[allowed.length - 1]
+    : (allowed.length >= 2 ? allowed[allowed.length - 2] : allowed[0]);
   return { allowed, def };
 }
 
@@ -286,75 +288,8 @@ function baseGoIds() {
  * na hora de salvar: sem preset, sem checagem de reasoning e sem checagem de credencial por PC.
  * Agora as duas nascem daqui, mudando só a lista de ids do opencode-go.
  */
-function providerList(goIds) {
+function providerList() {
   return [
-    {
-      id: 'opencode-go',
-      name: 'OpenCode Go',
-      baseUrl: OP,
-      keyEnv: 'OPENCODE_GO_API_KEY',
-      availableOn: ['server', 'acer', 'windows'],
-      badge: 'Padrão da frota',
-      description: 'Provedor padrão da frota Hermes via OpenCode Go. Lista atualizada automaticamente do relay (cache 5 min).',
-      models: goIds.map(buildModel)
-    },
-    {
-      id: 'opencode-zen',
-      name: 'OpenCode Zen (grátis)',
-      baseUrl: 'https://opencode.ai/zen/v1',
-      keyEnv: 'OPENCODE_ZEN_API_KEY',
-      availableOn: ['server', 'acer', 'windows'],
-      badge: '6 grátis',
-      description: 'Modelos GRATUITOS do OpenCode normal (endpoint /zen/v1), todos validados em HTTP 200 (2026-08-24).',
-      models: ZEN_FREE_IDS.map((id) => {
-        const m = buildModel(id);
-        // reasoning: hy3-free segue a família hy3 (none|low|high); laguna aceita low|medium|high
-        if (id === 'hy3-free') {
-          m.allowedReasoning = ['none', 'low', 'high'];
-          m.defaultReasoning = 'high';
-        } else if (id === 'laguna-s-2.1-free') {
-          m.allowedReasoning = ['low', 'medium', 'high'];
-          m.defaultReasoning = 'high';
-        }
-        m.badge = 'GRÁTIS 🟢';
-        m.name = prettyName(id);
-        return m;
-      })
-    },
-    {
-      id: 'xai-oauth',
-      name: 'xAI SuperGrok',
-      baseUrl: 'https://api.x.ai/v1',
-      keyEnv: 'XAI_API_KEY (ou sessão SuperGrok)',
-      availableOn: ['server', 'acer'],
-      badge: 'xAI OAuth',
-      description: 'Acesso via sessão SuperGrok autenticada (auth.json) ou XAI_API_KEY.',
-      models: [
-        {
-          ...buildModel('grok-4.6'),
-          id: 'grok-4.6',
-          name: 'Grok 4.6 (xAI SuperGrok)',
-          allowedReasoning: ['low', 'high'],
-          defaultReasoning: 'high',
-          badge: 'xAI OAuth',
-          contextLength: 131072,
-          description: 'Acesso via sessão SuperGrok autenticada.'
-        }
-      ]
-    },
-    {
-      id: 'deepseek-standard',
-      name: 'DeepSeek API (Oficial)',
-      baseUrl: 'https://api.deepseek.com/v1',
-      keyEnv: 'DEEPSEEK_API_KEY',
-      availableOn: ['server', 'acer', 'windows'],
-      badge: 'DeepSeek Oficial',
-      description: 'API oficial da DeepSeek com tarifação por token. Chave nos 3 PCs.',
-      models: [
-        { ...buildModel('deepseek-v4-pro'), name: 'DeepSeek V4 Pro (Oficial)', badge: 'DeepSeek Oficial', description: 'Modelo oficial com tarifação por token na API da DeepSeek.' },
-        { ...buildModel('deepseek-v4-flash'), name: 'DeepSeek V4 Flash (Oficial)', badge: 'DeepSeek Oficial', description: 'Variante Flash na API oficial da DeepSeek, mais rápida e econômica.' }
-      ]
-    },
     {
       id: 'ninerouter',
       name: '9Router (Frota)',
@@ -362,7 +297,7 @@ function providerList(goIds) {
       keyEnv: 'NINEROUTER_API_KEY',
       availableOn: ['server', 'acer', 'windows'],
       badge: 'Tailscale · ' + NINEROUTER_IDS.length + ' modelos',
-      description: 'Gateway OpenAI-compatible do server-desktop, disponível nos 13 perfis Hermes pela malha privada Tailscale. Mostra somente os modelos atualmente liberados pelo 9Router.',
+      description: 'Gateway OpenAI-compatible do server-desktop, disponível nos 14 agentes Hermes pela malha privada Tailscale. Catálogo medido por POST real em 14/09/2026.',
       models: NINEROUTER_IDS.map(buildNineRouterModel)
     },
     {
@@ -388,12 +323,12 @@ function providerList(goIds) {
 }
 
 async function buildProviders() {
-  return providerList(await goModelIds());
+  return providerList();
 }
 
-// Catálogo estático (sem rede) — usado pela validação do backend e como fallback do endpoint
+// Catálogo estático medido — usado também pela validação do backend.
 function _fallbackProviders() {
-  return providerList(baseGoIds());
+  return providerList();
 }
 
 function flattenPresets(providers) {
@@ -407,7 +342,7 @@ function flattenPresets(providers) {
 }
 
 /**
- * GET /api/models/providers — catálogo hierárquico (opencode-go atualizado ao vivo)
+ * GET /api/models/providers — catálogo hierárquico dos provedores que passaram no teste real.
  */
 router.get('/providers', async (req, res) => {
   try {

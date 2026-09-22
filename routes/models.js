@@ -54,6 +54,13 @@ const MODEL_META = {
   'grok-4.5':       { ctx: 500000,  out: 500000, in: 2,      outCost: 6,   free: false },
   'muse-spark-1.2-contributor': { ctx: 1048576, out: 131072, in: 0.1, outCost: 0.2, free: false },
 
+  // claude code (9Router)
+  'cc/claude-opus-5':            { ctx: 1000000, out: 128000, free: false },
+  'cc/claude-sonnet-5':          { ctx: 1000000, out: 128000, free: false },
+  'cc/claude-haiku-4-5-20251001':{ ctx: 200000,  out: 64000,  free: false },
+  'cc/claude-sonnet-4-5-20250929':{ ctx: 1000000, out: 128000, free: false },
+  'cc/claude-opus-4-5-20251101': { ctx: 1000000, out: 128000, free: false },
+
   // ── opencode normal (ZEN /zen/v1) — modelos GRATUITOS validados em HTTP 200 (2026-08-24) ──
   'hy3-free':       { ctx: 190000,  out: 64000,  in: 0, outCost: 0, free: true },
   'mimo-v2.5-free': { ctx: 200000,  out: 32000,  in: 0, outCost: 0, free: true },
@@ -140,7 +147,9 @@ const NINEROUTER_IDS = [
   'cx/gpt-5.5', 'cx/gpt-5.5-review', 'cx/gpt-5.6-luna', 'cx/gpt-5.6-luna-review',
   'cx/gpt-5.6-sol', 'cx/gpt-5.6-sol-review',
   'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
-  'ollama/gpt-oss:120b'
+  'ollama/gpt-oss:120b',
+  'cc/claude-opus-5', 'cc/claude-sonnet-5', 'cc/claude-haiku-4-5-20251001',
+  'cc/claude-sonnet-4-5-20250929', 'cc/claude-opus-4-5-20251101'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -162,7 +171,12 @@ const NINEROUTER_THINKING = {
   'cx/gpt-5.6-luna': 'openai', 'cx/gpt-5.6-luna-review': 'openai',
   'cx/gpt-5.6-sol': 'openai', 'cx/gpt-5.6-sol-review': 'openai',
   'cx/gpt-5.6-terra': 'openai', 'cx/gpt-5.6-terra-review': 'openai',
-  'ollama/gpt-oss:120b': 'openai'
+  'ollama/gpt-oss:120b': 'openai',
+  'cc/claude-opus-5': 'claude-adaptive',
+  'cc/claude-sonnet-5': 'claude-adaptive',
+  'cc/claude-haiku-4-5-20251001': 'claude-budget',
+  'cc/claude-sonnet-4-5-20250929': 'claude-adaptive',
+  'cc/claude-opus-4-5-20251101': 'claude-adaptive'
 };
 
 // reasoning_effort aceito por família de thinkingFormat (coerente com o Hermes)
@@ -194,7 +208,7 @@ function ninerouterName(id) {
   const [prefix, ...parts] = id.split('/');
   const source = {
     ag: 'Antigravity', cx: 'Codex', ollama: 'Ollama',
-    nvidia: 'NVIDIA NIM'
+    nvidia: 'NVIDIA NIM', cc: 'Claude Code'
   }[prefix] || prefix;
   return source + ' — ' + parts.join('/');
 }

@@ -103,7 +103,11 @@ check('provedores mortos foram removidos',
 check('openrouter presente na validação', provs.some((p) => p.id === 'openrouter'));
 check('preset de modelo OpenRouter resolve', (models.findModelPreset('deepseek/deepseek-v4-flash') || {}).provider === 'openrouter');
 const nr = provs.find((p) => p.id === 'ninerouter');
-check('9Router tem exatamente os 29 modelos aprovados', nr && nr.models.length === 29, nr && nr.models.length);
+check('9Router tem exatamente os 34 modelos aprovados', nr && nr.models.length === 34, nr && nr.models.length);
+const claudeSonnet5 = models.findModelPreset('cc/claude-sonnet-5', 'ninerouter');
+check('Claude Sonnet 5 existe no 9Router', !!claudeSonnet5);
+const claudeOpus5 = models.findModelPreset('cc/claude-opus-5', 'ninerouter');
+check('Claude Opus 5 existe no 9Router', !!claudeOpus5);
 const gemini38 = models.findModelPreset('ag/gemini-3.8-flash-high', 'ninerouter');
 check('Gemini 3.8 Flash High existe no 9Router', !!gemini38);
 check('Gemini 3.8 aceita low, medium e high',

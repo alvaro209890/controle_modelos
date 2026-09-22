@@ -103,7 +103,9 @@ check('provedores mortos foram removidos',
 check('openrouter presente na validação', provs.some((p) => p.id === 'openrouter'));
 check('preset de modelo OpenRouter resolve', (models.findModelPreset('deepseek/deepseek-v4-flash') || {}).provider === 'openrouter');
 const nr = provs.find((p) => p.id === 'ninerouter');
-check('9Router tem exatamente os 34 modelos aprovados', nr && nr.models.length === 34, nr && nr.models.length);
+check('9Router tem exatamente os 35 modelos aprovados', nr && nr.models.length === 35, nr && nr.models.length);
+const claudeOpus55 = models.findModelPreset('cc/claude-opus-5-5', 'ninerouter');
+check('Claude Opus 5.5 existe no 9Router', !!claudeOpus55);
 const claudeSonnet5 = models.findModelPreset('cc/claude-sonnet-5', 'ninerouter');
 check('Claude Sonnet 5 existe no 9Router', !!claudeSonnet5);
 const claudeOpus5 = models.findModelPreset('cc/claude-opus-5', 'ninerouter');

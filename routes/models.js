@@ -55,6 +55,7 @@ const MODEL_META = {
   'muse-spark-1.2-contributor': { ctx: 1048576, out: 131072, in: 0.1, outCost: 0.2, free: false },
 
   // claude code (9Router)
+  'cc/claude-opus-5-5':        { ctx: 1000000, out: 128000, free: false },
   'cc/claude-opus-5':            { ctx: 1000000, out: 128000, free: false },
   'cc/claude-sonnet-5':          { ctx: 1000000, out: 128000, free: false },
   'cc/claude-haiku-4-5-20251001':{ ctx: 200000,  out: 64000,  free: false },
@@ -148,7 +149,7 @@ const NINEROUTER_IDS = [
   'cx/gpt-5.6-sol', 'cx/gpt-5.6-sol-review',
   'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
   'ollama/gpt-oss:120b',
-  'cc/claude-opus-5', 'cc/claude-sonnet-5', 'cc/claude-haiku-4-5-20251001',
+  'cc/claude-opus-5-5', 'cc/claude-opus-5', 'cc/claude-sonnet-5', 'cc/claude-haiku-4-5-20251001',
   'cc/claude-sonnet-4-5-20250929', 'cc/claude-opus-4-5-20251101'
 ];
 
@@ -172,6 +173,7 @@ const NINEROUTER_THINKING = {
   'cx/gpt-5.6-sol': 'openai', 'cx/gpt-5.6-sol-review': 'openai',
   'cx/gpt-5.6-terra': 'openai', 'cx/gpt-5.6-terra-review': 'openai',
   'ollama/gpt-oss:120b': 'openai',
+  'cc/claude-opus-5-5': 'claude-adaptive',
   'cc/claude-opus-5': 'claude-adaptive',
   'cc/claude-sonnet-5': 'claude-adaptive',
   'cc/claude-haiku-4-5-20251001': 'claude-budget',

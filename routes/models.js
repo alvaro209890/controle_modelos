@@ -196,6 +196,14 @@ const NINEROUTER_TF_ALLOWED = {
 };
 
 function ninerouterReasoning(id) {
+  // Modelos com thinking obrigatório (não aceitam 'none' no upstream da Anthropic)
+  if (id === 'cc/claude-opus-5-5') {
+    return { allowed: ['low', 'medium', 'high', 'max'], def: 'high' };
+  }
+  // Modelos Claude com raciocínio adaptativo ou budget aceitam desativar (none) ou modular
+  if (id.startsWith('cc/claude-') || id === 'ag/claude-sonnet-4-6' || id === 'ag/claude-opus-4-6-thinking') {
+    return { allowed: ['none', 'low', 'medium', 'high', 'max'], def: 'high' };
+  }
   const tf = NINEROUTER_THINKING[id] || null;
   if (tf === null) return { allowed: ['none'], def: 'none' };
   const allowed = NINEROUTER_TF_ALLOWED[tf] || ['none', 'low', 'medium', 'high', 'max'];

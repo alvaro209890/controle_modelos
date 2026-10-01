@@ -68,7 +68,21 @@ const MODEL_META = {
   'laguna-s-2.1-free': { ctx: 256000, out: 32000, in: 0, outCost: 0, free: true },
   'nemotron-3.5-lightning-free': { ctx: 262144, out: 262144, in: 0, outCost: 0, free: true },
   'nemotron-3-ultra-free': { ctx: 1000000, out: 128000, in: 0, outCost: 0, free: true },
-  'big-pickle': { ctx: 200000, out: 32000, in: 0, outCost: 0, free: true }
+  'big-pickle': { ctx: 200000, out: 32000, in: 0, outCost: 0, free: true },
+
+  // ── KiloCode (modelos 100% gratuitos validados em HTTP 200 no 9Router) ───────
+  'kc/stealth/space-bunny-alpha': { ctx: 1000000, out: 128000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Modelo stealth da OpenAI com raciocínio nativo e 1M contexto. Disponível até 05/10/2026.' },
+  'kc/kilo-auto/free': { ctx: 256000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Roteador automático inteligente da Kilo para modelos gratuitos (256k contexto).' },
+  'kc/nvidia/nemotron-3.5-lightning:free': { ctx: 1000000, out: 262144, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. NVIDIA Nemotron 3.5 com raciocínio nativo e 1M contexto.' },
+  'kc/nvidia/nemotron-3-ultra-550b-a55b:free': { ctx: 1000000, out: 128000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. NVIDIA Nemotron 3 Ultra com 1M contexto.' },
+  'kc/nvidia/nemotron-3-super-120b-a12b:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. NVIDIA Nemotron 3 Super com 262k contexto.' },
+  'kc/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { ctx: 256000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. NVIDIA Nemotron 3 Nano Omni com raciocínio nativo.' },
+  'kc/stepfun/step-3.7-flash:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. StepFun 3.7 Flash com 262k contexto.' },
+  'kc/qwen/qwen3.8-27b:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Qwen 3.8 27B com 262k contexto.' },
+  'kc/cohere/north-mini-code:free': { ctx: 256000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Cohere North Mini Code especializado em código (256k contexto).' },
+  'kc/poolside/laguna-s-2.1:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Poolside Laguna S 2.1 com 262k contexto.' },
+  'kc/poolside/laguna-xs-2.1:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Poolside Laguna XS 2.1 com 262k contexto.' },
+  'kc/openrouter/free': { ctx: 200000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Roteador de modelos gratuitos da OpenRouter via Kilo.' }
 };
 
 // reasoning por família (plugin opencode-zen)
@@ -150,7 +164,20 @@ const NINEROUTER_IDS = [
   'cx/gpt-5.6-terra', 'cx/gpt-5.6-terra-review',
   'ollama/gpt-oss:120b',
   'cc/claude-opus-5-5', 'cc/claude-opus-5', 'cc/claude-sonnet-5', 'cc/claude-haiku-4-5-20251001',
-  'cc/claude-sonnet-4-5-20250929', 'cc/claude-opus-4-5-20251101'
+  'cc/claude-sonnet-4-5-20250929', 'cc/claude-opus-4-5-20251101',
+  // Modelos KiloCode 100% gratuitos validados com HTTP 200 no 9Router
+  'kc/stealth/space-bunny-alpha',
+  'kc/kilo-auto/free',
+  'kc/nvidia/nemotron-3.5-lightning:free',
+  'kc/nvidia/nemotron-3-ultra-550b-a55b:free',
+  'kc/nvidia/nemotron-3-super-120b-a12b:free',
+  'kc/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'kc/stepfun/step-3.7-flash:free',
+  'kc/qwen/qwen3.8-27b:free',
+  'kc/cohere/north-mini-code:free',
+  'kc/poolside/laguna-s-2.1:free',
+  'kc/poolside/laguna-xs-2.1:free',
+  'kc/openrouter/free'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -178,7 +205,20 @@ const NINEROUTER_THINKING = {
   'cc/claude-sonnet-5': 'claude-adaptive',
   'cc/claude-haiku-4-5-20251001': 'claude-budget',
   'cc/claude-sonnet-4-5-20250929': 'claude-adaptive',
-  'cc/claude-opus-4-5-20251101': 'claude-adaptive'
+  'cc/claude-opus-4-5-20251101': 'claude-adaptive',
+  // KiloCode
+  'kc/stealth/space-bunny-alpha': 'openai',
+  'kc/kilo-auto/free': 'openai',
+  'kc/nvidia/nemotron-3.5-lightning:free': 'openai',
+  'kc/nvidia/nemotron-3-ultra-550b-a55b:free': null,
+  'kc/nvidia/nemotron-3-super-120b-a12b:free': null,
+  'kc/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 'openai',
+  'kc/stepfun/step-3.7-flash:free': null,
+  'kc/qwen/qwen3.8-27b:free': 'qwen',
+  'kc/cohere/north-mini-code:free': null,
+  'kc/poolside/laguna-s-2.1:free': null,
+  'kc/poolside/laguna-xs-2.1:free': null,
+  'kc/openrouter/free': null
 };
 
 // reasoning_effort aceito por família de thinkingFormat (coerente com o Hermes)
@@ -215,10 +255,25 @@ function ninerouterReasoning(id) {
 }
 
 function ninerouterName(id) {
+  const customMap = {
+    'kc/stealth/space-bunny-alpha': 'KiloCode — Space Bunny Alpha (OpenAI 1M, até 05/10)',
+    'kc/kilo-auto/free': 'KiloCode — Auto Free (Roteador 256k)',
+    'kc/nvidia/nemotron-3.5-lightning:free': 'KiloCode — Nemotron 3.5 Lightning (1M Thinking)',
+    'kc/nvidia/nemotron-3-ultra-550b-a55b:free': 'KiloCode — Nemotron 3 Ultra (1M)',
+    'kc/nvidia/nemotron-3-super-120b-a12b:free': 'KiloCode — Nemotron 3 Super (262k)',
+    'kc/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 'KiloCode — Nemotron 3 Nano Omni (256k Thinking)',
+    'kc/stepfun/step-3.7-flash:free': 'KiloCode — Step 3.7 Flash (262k)',
+    'kc/qwen/qwen3.8-27b:free': 'KiloCode — Qwen 3.8 27B (262k)',
+    'kc/cohere/north-mini-code:free': 'KiloCode — Cohere North Mini Code (256k)',
+    'kc/poolside/laguna-s-2.1:free': 'KiloCode — Laguna S 2.1 (262k)',
+    'kc/poolside/laguna-xs-2.1:free': 'KiloCode — Laguna XS 2.1 (262k)',
+    'kc/openrouter/free': 'KiloCode — OpenRouter Free (200k)'
+  };
+  if (customMap[id]) return customMap[id];
   const [prefix, ...parts] = id.split('/');
   const source = {
     ag: 'Antigravity', cx: 'Codex', ollama: 'Ollama',
-    nvidia: 'NVIDIA NIM', cc: 'Claude Code'
+    nvidia: 'NVIDIA NIM', cc: 'Claude Code', kc: 'KiloCode'
   }[prefix] || prefix;
   return source + ' — ' + parts.join('/');
 }
@@ -226,15 +281,16 @@ function ninerouterName(id) {
 function buildNineRouterModel(id) {
   const model = buildModel(id);
   const r = ninerouterReasoning(id);
+  const meta = MODEL_META[id] || {};
   return {
     ...model,
     name: ninerouterName(id),
-    badge: '9Router',
-    free: false,
+    badge: meta.free ? '9Router · GRÁTIS 🟢' : '9Router',
+    free: !!meta.free,
     requiresPatch: false,
     allowedReasoning: r.allowed,
     defaultReasoning: r.def,
-    description: 'Disponível pelo 9Router do server-desktop; catálogo lido do endpoint autenticado da frota.'
+    description: meta.desc || (meta.free ? 'Modelo gratuito disponível via KiloCode no 9Router.' : 'Disponível pelo 9Router do server-desktop; catálogo lido do endpoint autenticado da frota.')
   };
 }
 

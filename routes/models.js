@@ -82,7 +82,15 @@ const MODEL_META = {
   'kc/cohere/north-mini-code:free': { ctx: 256000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Cohere North Mini Code especializado em código (256k contexto).' },
   'kc/poolside/laguna-s-2.1:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Poolside Laguna S 2.1 com 262k contexto.' },
   'kc/poolside/laguna-xs-2.1:free': { ctx: 262144, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Poolside Laguna XS 2.1 com 262k contexto.' },
-  'kc/openrouter/free': { ctx: 200000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Roteador de modelos gratuitos da OpenRouter via Kilo.' }
+  'kc/openrouter/free': { ctx: 200000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Roteador de modelos gratuitos da OpenRouter via Kilo.' },
+
+  // ── NVIDIA NIM (conexão "canaisgames" no 9Router; free tier do Developer Program, ~40 req/min) ──
+  'nvidia/moonshotai/kimi-k3': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Kimi K3 com visão. Reasoning só low/high/max (medium recusado pela NVIDIA; none não desliga via 9Router). Limite ~40 req/min.' },
+  'nvidia/z-ai/glm-5.3': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). GLM 5.3; reasoning escala de low a max. none dá 400 (enable_thinking).' },
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { ctx: 128000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Ultra; raciocínio liga/desliga (os níveis não mudam o esforço).' },
+  'nvidia/nvidia/nemotron-3-super-120b-a12b': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Super; rápido, raciocínio liga/desliga.' },
+  'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3.5 Lightning; raciocínio liga/desliga.' },
+  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Nano Omni (multimodal); raciocínio liga/desliga.' }
 };
 
 // reasoning por família (plugin opencode-zen)
@@ -177,7 +185,18 @@ const NINEROUTER_IDS = [
   'kc/cohere/north-mini-code:free',
   'kc/poolside/laguna-s-2.1:free',
   'kc/poolside/laguna-xs-2.1:free',
-  'kc/openrouter/free'
+  'kc/openrouter/free',
+  // NVIDIA NIM — POST real via 9Router em 05/10/2026. O catálogo do 9Router 0.5.95 lista
+  // minimax-m2.7/m3, glm-5.2 e deepseek-v4-pro/flash (todos 410 end-of-life na NVIDIA) e
+  // kimi-k2.6 (404 para esta conta); ficaram de fora. Os ids abaixo não estão no /v1/models
+  // do 9Router, mas ele repassa `nvidia/<id upstream>` cru e todos responderam 200.
+  // glm-5.3-flash e deepseek-v4.1-flash deram connect timeout e também ficaram de fora.
+  'nvidia/moonshotai/kimi-k3',
+  'nvidia/z-ai/glm-5.3',
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
+  'nvidia/nvidia/nemotron-3-super-120b-a12b',
+  'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b',
+  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -235,7 +254,21 @@ const NINEROUTER_TF_ALLOWED = {
   'qwen':            ['low', 'medium', 'high']
 };
 
+// Níveis medidos por POST real via 9Router em 05/10/2026 (reasoning_tokens por nível).
+// Kimi K3: a NVIDIA só aceita low|high|max (medium → 400) e o 9Router não repassa none.
+// GLM 5.3: low→max escala (14→1086 tokens); none → 400 por `enable_thinking`.
+// Nemotron: none desliga, qualquer outro nível dá o mesmo esforço — só liga/desliga.
+const NVIDIA_REASONING = {
+  'nvidia/moonshotai/kimi-k3': { allowed: ['low', 'high', 'max'], def: 'high' },
+  'nvidia/z-ai/glm-5.3': { allowed: ['low', 'medium', 'high', 'max'], def: 'high' },
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { allowed: ['none', 'high'], def: 'high' },
+  'nvidia/nvidia/nemotron-3-super-120b-a12b': { allowed: ['none', 'high'], def: 'high' },
+  'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b': { allowed: ['none', 'high'], def: 'high' },
+  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { allowed: ['none', 'high'], def: 'high' }
+};
+
 function ninerouterReasoning(id) {
+  if (NVIDIA_REASONING[id]) return NVIDIA_REASONING[id];
   // Modelos com thinking obrigatório (não aceitam 'none' no upstream da Anthropic)
   if (id === 'cc/claude-opus-5-5') {
     return { allowed: ['low', 'medium', 'high', 'max'], def: 'high' };
@@ -267,7 +300,13 @@ function ninerouterName(id) {
     'kc/cohere/north-mini-code:free': 'KiloCode — Cohere North Mini Code (256k)',
     'kc/poolside/laguna-s-2.1:free': 'KiloCode — Laguna S 2.1 (262k)',
     'kc/poolside/laguna-xs-2.1:free': 'KiloCode — Laguna XS 2.1 (262k)',
-    'kc/openrouter/free': 'KiloCode — OpenRouter Free (200k)'
+    'kc/openrouter/free': 'KiloCode — OpenRouter Free (200k)',
+    'nvidia/moonshotai/kimi-k3': 'NVIDIA NIM — Kimi K3',
+    'nvidia/z-ai/glm-5.3': 'NVIDIA NIM — GLM 5.3',
+    'nvidia/nvidia/nemotron-3-ultra-550b-a55b': 'NVIDIA NIM — Nemotron 3 Ultra',
+    'nvidia/nvidia/nemotron-3-super-120b-a12b': 'NVIDIA NIM — Nemotron 3 Super',
+    'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b': 'NVIDIA NIM — Nemotron 3.5 Lightning',
+    'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': 'NVIDIA NIM — Nemotron 3 Nano Omni'
   };
   if (customMap[id]) return customMap[id];
   const [prefix, ...parts] = id.split('/');
@@ -290,7 +329,7 @@ function buildNineRouterModel(id) {
     requiresPatch: false,
     allowedReasoning: r.allowed,
     defaultReasoning: r.def,
-    description: meta.desc || (meta.free ? 'Modelo gratuito disponível via KiloCode no 9Router.' : 'Disponível pelo 9Router do server-desktop; catálogo lido do endpoint autenticado da frota.')
+    description: meta.desc || (meta.free ? 'Modelo gratuito disponível no 9Router.' : 'Disponível pelo 9Router do server-desktop; catálogo lido do endpoint autenticado da frota.')
   };
 }
 

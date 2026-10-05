@@ -103,7 +103,17 @@ check('provedores mortos foram removidos',
 check('openrouter presente na validação', provs.some((p) => p.id === 'openrouter'));
 check('preset de modelo OpenRouter resolve', (models.findModelPreset('deepseek/deepseek-v4-flash') || {}).provider === 'openrouter');
 const nr = provs.find((p) => p.id === 'ninerouter');
-check('9Router tem exatamente os 35 modelos aprovados', nr && nr.models.length === 35, nr && nr.models.length);
+check('9Router tem exatamente os 53 modelos aprovados', nr && nr.models.length === 53, nr && nr.models.length);
+const kimiK3 = models.findModelPreset('nvidia/moonshotai/kimi-k3', 'ninerouter');
+check('Kimi K3 (NVIDIA) aceita só low, high e max',
+  kimiK3 && JSON.stringify(kimiK3.allowedReasoning) === JSON.stringify(['low', 'high', 'max']),
+  kimiK3 && JSON.stringify(kimiK3.allowedReasoning));
+const nemoUltra = models.findModelPreset('nvidia/nvidia/nemotron-3-ultra-550b-a55b', 'ninerouter');
+check('Nemotron 3 Ultra (NVIDIA) é liga/desliga',
+  nemoUltra && JSON.stringify(nemoUltra.allowedReasoning) === JSON.stringify(['none', 'high']),
+  nemoUltra && JSON.stringify(nemoUltra.allowedReasoning));
+check('modelos NVIDIA em fim de vida não aparecem',
+  nr && !nr.models.some((m) => ['nvidia/minimaxai/minimax-m3', 'nvidia/z-ai/glm-5.2', 'nvidia/deepseek-ai/deepseek-v4-pro', 'nvidia/moonshotai/kimi-k2.6'].includes(m.id)));
 const claudeOpus55 = models.findModelPreset('cc/claude-opus-5-5', 'ninerouter');
 check('Claude Opus 5.5 existe no 9Router', !!claudeOpus55);
 const claudeSonnet5 = models.findModelPreset('cc/claude-sonnet-5', 'ninerouter');

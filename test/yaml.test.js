@@ -103,7 +103,7 @@ check('provedores mortos foram removidos',
 check('openrouter presente na validação', provs.some((p) => p.id === 'openrouter'));
 check('preset de modelo OpenRouter resolve', (models.findModelPreset('deepseek/deepseek-v4-flash') || {}).provider === 'openrouter');
 const nr = provs.find((p) => p.id === 'ninerouter');
-check('9Router tem exatamente os 53 modelos aprovados', nr && nr.models.length === 53, nr && nr.models.length);
+check('9Router tem exatamente os 50 modelos aprovados', nr && nr.models.length === 50, nr && nr.models.length);
 const kimiK3 = models.findModelPreset('nvidia/moonshotai/kimi-k3', 'ninerouter');
 check('Kimi K3 (NVIDIA) aceita só low, high e max',
   kimiK3 && JSON.stringify(kimiK3.allowedReasoning) === JSON.stringify(['low', 'high', 'max']),

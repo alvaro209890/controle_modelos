@@ -85,12 +85,9 @@ const MODEL_META = {
   'kc/openrouter/free': { ctx: 200000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS. Roteador de modelos gratuitos da OpenRouter via Kilo.' },
 
   // ── NVIDIA NIM (conexão "canaisgames" no 9Router; free tier do Developer Program, ~40 req/min) ──
-  'nvidia/moonshotai/kimi-k3': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Kimi K3 com visão. Reasoning só low/high/max (medium recusado pela NVIDIA; none não desliga via 9Router). Limite ~40 req/min.' },
-  'nvidia/z-ai/glm-5.3': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). GLM 5.3; reasoning escala de low a max. none dá 400 (enable_thinking).' },
-  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { ctx: 128000, out: 64000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Ultra; raciocínio liga/desliga (os níveis não mudam o esforço).' },
-  'nvidia/nvidia/nemotron-3-super-120b-a12b': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Super; rápido, raciocínio liga/desliga.' },
-  'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3.5 Lightning; raciocínio liga/desliga.' },
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Nano Omni (multimodal); raciocínio liga/desliga.' }
+  'nvidia/moonshotai/kimi-k3': { ctx: 1048576, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Kimi K3 com visão. Reasoning só low/high/max (medium recusado pela NVIDIA; none não desliga via 9Router). Limite ~40 req/min.' },
+  'nvidia/z-ai/glm-5.3': { ctx: 1048576, out: 131072, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). GLM 5.3; reasoning escala de low a max. none dá 400 (enable_thinking).' },
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { ctx: 1000000, in: 0, outCost: 0, free: true, desc: '⭐ GRÁTIS (NVIDIA NIM). Nemotron 3 Ultra; raciocínio liga/desliga (os níveis não mudam o esforço).' }
 };
 
 // reasoning por família (plugin opencode-zen)
@@ -190,13 +187,11 @@ const NINEROUTER_IDS = [
   // minimax-m2.7/m3, glm-5.2 e deepseek-v4-pro/flash (todos 410 end-of-life na NVIDIA) e
   // kimi-k2.6 (404 para esta conta); ficaram de fora. Os ids abaixo não estão no /v1/models
   // do 9Router, mas ele repassa `nvidia/<id upstream>` cru e todos responderam 200.
-  // glm-5.3-flash e deepseek-v4.1-flash deram connect timeout e também ficaram de fora.
+  // glm-5.3-flash e deepseek-v4.1-flash deram connect timeout. Só entram modelos grandes com
+  // contexto >= 1M (pedido do Álvaro, 05/10): Nemotron Super/Lightning/Nano Omni ficaram de fora.
   'nvidia/moonshotai/kimi-k3',
   'nvidia/z-ai/glm-5.3',
-  'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-  'nvidia/nvidia/nemotron-3-super-120b-a12b',
-  'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b',
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b'
 ];
 
 // thinkingFormat de cada modelo, lido do endpoint /v1/models (26/08/2026).
@@ -261,10 +256,7 @@ const NINEROUTER_TF_ALLOWED = {
 const NVIDIA_REASONING = {
   'nvidia/moonshotai/kimi-k3': { allowed: ['low', 'high', 'max'], def: 'high' },
   'nvidia/z-ai/glm-5.3': { allowed: ['low', 'medium', 'high', 'max'], def: 'high' },
-  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { allowed: ['none', 'high'], def: 'high' },
-  'nvidia/nvidia/nemotron-3-super-120b-a12b': { allowed: ['none', 'high'], def: 'high' },
-  'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b': { allowed: ['none', 'high'], def: 'high' },
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { allowed: ['none', 'high'], def: 'high' }
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { allowed: ['none', 'high'], def: 'high' }
 };
 
 function ninerouterReasoning(id) {
@@ -303,10 +295,7 @@ function ninerouterName(id) {
     'kc/openrouter/free': 'KiloCode — OpenRouter Free (200k)',
     'nvidia/moonshotai/kimi-k3': 'NVIDIA NIM — Kimi K3',
     'nvidia/z-ai/glm-5.3': 'NVIDIA NIM — GLM 5.3',
-    'nvidia/nvidia/nemotron-3-ultra-550b-a55b': 'NVIDIA NIM — Nemotron 3 Ultra',
-    'nvidia/nvidia/nemotron-3-super-120b-a12b': 'NVIDIA NIM — Nemotron 3 Super',
-    'nvidia/nvidia/nemotron-3.5-lightning-30b-a3b': 'NVIDIA NIM — Nemotron 3.5 Lightning',
-    'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': 'NVIDIA NIM — Nemotron 3 Nano Omni'
+    'nvidia/nvidia/nemotron-3-ultra-550b-a55b': 'NVIDIA NIM — Nemotron 3 Ultra'
   };
   if (customMap[id]) return customMap[id];
   const [prefix, ...parts] = id.split('/');

@@ -61,6 +61,8 @@ const MODEL_META = {
   'cc/claude-haiku-4-5-20251001':{ ctx: 200000,  out: 64000,  free: false },
   'cc/claude-sonnet-4-5-20250929':{ ctx: 1000000, out: 128000, free: false },
   'cc/claude-opus-4-5-20251101': { ctx: 1000000, out: 128000, free: false },
+  // kiro (9Router, conta do Álvaro com créditos) — contexto não medido, 200k conservador
+  'kr/claude-opus-5.5':         { ctx: 200000,  out: 128000, free: false },
 
   // ── opencode normal (ZEN /zen/v1) — modelos GRATUITOS validados em HTTP 200 (2026-08-24) ──
   'hy3-free':       { ctx: 190000,  out: 64000,  in: 0, outCost: 0, free: true },
@@ -170,6 +172,8 @@ const NINEROUTER_IDS = [
   'ollama/gpt-oss:120b',
   'cc/claude-opus-5-5', 'cc/claude-opus-5', 'cc/claude-sonnet-5', 'cc/claude-haiku-4-5-20251001',
   'cc/claude-sonnet-4-5-20250929', 'cc/claude-opus-4-5-20251101',
+  // Kiro — POST real em 06/10/2026: none..max aceitos, medium/high mudam o raciocínio
+  'kr/claude-opus-5.5',
   // Modelos KiloCode 100% gratuitos validados com HTTP 200 no 9Router
   'kc/stealth/space-bunny-alpha',
   'kc/kilo-auto/free',
@@ -220,6 +224,7 @@ const NINEROUTER_THINKING = {
   'cc/claude-haiku-4-5-20251001': 'claude-budget',
   'cc/claude-sonnet-4-5-20250929': 'claude-adaptive',
   'cc/claude-opus-4-5-20251101': 'claude-adaptive',
+  'kr/claude-opus-5.5': 'claude-adaptive',
   // KiloCode
   'kc/stealth/space-bunny-alpha': 'openai',
   'kc/kilo-auto/free': 'openai',
@@ -261,6 +266,10 @@ const NVIDIA_REASONING = {
 
 function ninerouterReasoning(id) {
   if (NVIDIA_REASONING[id]) return NVIDIA_REASONING[id];
+  // Kiro: medium 2,4k chars de raciocínio, high 3,4k (06/10/2026); padrão medium gasta menos crédito
+  if (id === 'kr/claude-opus-5.5') {
+    return { allowed: ['none', 'low', 'medium', 'high', 'max'], def: 'medium' };
+  }
   // Modelos com thinking obrigatório (não aceitam 'none' no upstream da Anthropic)
   if (id === 'cc/claude-opus-5-5') {
     return { allowed: ['low', 'medium', 'high', 'max'], def: 'high' };
@@ -282,6 +291,7 @@ function ninerouterReasoning(id) {
 function ninerouterName(id) {
   const customMap = {
     'kc/stealth/space-bunny-alpha': 'KiloCode — Space Bunny Alpha (OpenAI 1M, até 05/10)',
+    'kr/claude-opus-5.5': 'Kiro — Claude Opus 5.5',
     'kc/kilo-auto/free': 'KiloCode — Auto Free (Roteador 256k)',
     'kc/nvidia/nemotron-3.5-lightning:free': 'KiloCode — Nemotron 3.5 Lightning (1M Thinking)',
     'kc/nvidia/nemotron-3-ultra-550b-a55b:free': 'KiloCode — Nemotron 3 Ultra (1M)',

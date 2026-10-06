@@ -413,7 +413,7 @@ function providerList() {
       name: '9Router (Frota)',
       baseUrl: NINEROUTER_URL,
       keyEnv: 'NINEROUTER_API_KEY',
-      availableOn: ['server', 'acer', 'windows'],
+      availableOn: ['server', 'acer', 'windows', 'aws'],
       badge: 'Tailscale · ' + NINEROUTER_IDS.length + ' modelos',
       description: 'Gateway OpenAI-compatible do server-desktop, disponível nos 14 agentes Hermes pela malha privada Tailscale. Catálogo medido por POST real em 14/09/2026.',
       models: NINEROUTER_IDS.map(buildNineRouterModel)

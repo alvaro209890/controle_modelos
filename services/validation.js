@@ -5,7 +5,7 @@ const SAFE_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 // Sem o `:` liberado, modelos Ollama com tag (:120b, :latest) também eram recusados.
 const MODEL_RE = /^[a-zA-Z0-9][a-zA-Z0-9._/:-]*$/;
 const REASONING_LEVELS = new Set(['none', 'low', 'medium', 'high', 'max']);
-const KNOWN_PCS = new Set(['server', 'acer', 'windows']);
+const KNOWN_PCS = new Set(['server', 'acer', 'windows', 'aws']);
 
 function safeIdentifier(value) {
   if (typeof value !== 'string') return null;

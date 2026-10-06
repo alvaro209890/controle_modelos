@@ -36,6 +36,8 @@ function fmtRelative(ts) {
 // ==================== ESTADO RETRÁTIL (mobile-first, 2026-08-23) ====================
 // Persistência local do que está recolhido: hosts e cards de agente.
 const LS_HOSTS_KEY = 'cm-collapsed-hosts';
+// PCs com coluna no painel (o hermes-aws entrou em 06/10/2026)
+const PCS = ['server', 'acer', 'windows', 'aws'];
 const LS_AGENTS_KEY = 'cm-collapsed-agents';
 const LS_AUTORESTART_KEY = 'cm-auto-restart';
 
@@ -106,7 +108,7 @@ function setAgentCollapsed(agentId, collapsed, persist) {
 }
 
 function applySavedCollapse() {
-  ['server', 'acer', 'windows'].forEach((pc) => setHostCollapsed(pc, collapsedHosts.has(pc), false));
+  PCS.forEach((pc) => setHostCollapsed(pc, collapsedHosts.has(pc), false));
   fleetData.agents.forEach((a) => {
     if (collapsedAgents.has(a.id)) setAgentCollapsed(a.id, true, false);
   });
@@ -328,16 +330,14 @@ async function loadAgents() {
 // ==================== RENDERIZAÇÃO ====================
 
 function renderApp() {
-  renderAgentsByHost('server');
-  renderAgentsByHost('acer');
-  renderAgentsByHost('windows');
+  PCS.forEach(renderAgentsByHost);
   const term = document.getElementById('search-input').value.toLowerCase().trim();
   if (term) filterAgents(term);
 }
 
 function updateHostStatusUI() {
   let onlineCount = 0;
-  ['server', 'acer', 'windows'].forEach((hostKey) => {
+  PCS.forEach((hostKey) => {
     const h = fleetData.hosts[hostKey];
     if (!h) return;
 
@@ -464,7 +464,7 @@ function renderAgentsByHost(pc) {
           <div class="agent-channel-desc">${esc(agent.description)}</div>
           <span class="agent-current-chip hidden"></span>
         </div>
-        <span class="channel-id-badge" title="Clique para copiar o ID do canal" onclick="event.stopPropagation();copyToClipboard('${esc(agent.channelId)}')">ID: ${esc(agent.channelId.slice(0, 7))}...</span>
+        ${agent.channelId ? `<span class="channel-id-badge" title="Clique para copiar o ID do canal" onclick="event.stopPropagation();copyToClipboard('${esc(agent.channelId)}')">ID: ${esc(agent.channelId.slice(0, 7))}...</span>` : `<span class="channel-id-badge" title="Sem canal no Discord">${esc(agent.guildName || '')}</span>`}
       </div>
 
       <div class="agent-card-body">
@@ -646,7 +646,7 @@ function applyAgent(agentId) {
 }
 
 function updateHostCounts() {
-  ['server', 'acer', 'windows'].forEach((pc) => {
+  PCS.forEach((pc) => {
     const el = document.getElementById('count-' + pc);
     if (!el) return;
     const n = fleetData.agents.filter((a) => a.pc === pc).length;
@@ -655,7 +655,7 @@ function updateHostCounts() {
 }
 
 function toggleAllHosts(expand) {
-  ['server', 'acer', 'windows'].forEach((pc) => setHostCollapsed(pc, !expand, true));
+  PCS.forEach((pc) => setHostCollapsed(pc, !expand, true));
 }
 
 function refreshAgentModelOptions(agentId, providerId) {
@@ -755,7 +755,7 @@ function updateBatchTargetWarning() {
   const provider = fleetData.providers.find((p) => p.id === document.getElementById('batch-provider').value);
   const target = document.getElementById('batch-target').value;
   if (!provider) { warn.classList.add('hidden'); return; }
-  const pcs = target === 'all' ? ['server', 'acer', 'windows'] : [target];
+  const pcs = target === 'all' ? PCS : [target];
   const missing = pcs.filter((pc) => !provider.availableOn.includes(pc));
   if (missing.length) {
     warn.textContent = `⚠️ ${provider.name} não tem credencial em: ${missing.join(', ')}. Escolha outro alvo ou outro provedor.`;
@@ -790,7 +790,7 @@ function filterAgents(term) {
     }
   });
   // Esconde a coluna cujo host ficou sem nenhum card visível
-  ['server', 'acer', 'windows'].forEach((pc) => {
+  PCS.forEach((pc) => {
     const col = document.getElementById('col-' + pc);
     if (!col) return;
     const visible = col.querySelectorAll('.agent-card:not(.filtered-out)').length;

@@ -214,6 +214,23 @@ const FLEET_AGENTS = [
     configPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\zelador\\config.yaml',
     envPath: 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\profiles\\zelador\\.env',
     description: 'Rotinas de vigilância de hora em hora e manutenção do host'
+  },
+
+  // aws (remoto via ssh aws) — orquestrador da frota, sem Discord: conversa pelo WhatsApp
+  {
+    id: 'aws-default',
+    pc: 'aws',
+    pcName: 'hermes-aws',
+    profile: 'default',
+    name: 'Orquestrador (AWS)',
+    channel: '📱｜WhatsApp do Álvaro',
+    channelId: '',
+    guildId: '',
+    guildName: 'WhatsApp',
+    isRoot: true,
+    configPath: '/home/ubuntu/.hermes/config.yaml',
+    envPath: '/home/ubuntu/.hermes/.env',
+    description: 'Orquestrador da frota: conversa com o Álvaro no WhatsApp e executa nos outros PCs por SSH'
   }
 ];
 
@@ -250,6 +267,17 @@ const HOSTS_INFO = {
     isLocal: false,
     guildName: 'Hermes Windows',
     guildId: '1540593890120433754'
+  },
+  aws: {
+    id: 'aws',
+    name: 'hermes-aws',
+    displayName: '☁️ AWS Orquestrador',
+    os: 'Ubuntu 24.04 (AWS Lightsail)',
+    ip: '100.127.79.81',
+    sshAlias: 'aws',
+    isLocal: false,
+    guildName: 'WhatsApp',
+    guildId: ''
   }
 };
 

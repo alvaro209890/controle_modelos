@@ -71,7 +71,7 @@
     </div>
   </section>
 
-  <!-- Main Fleet Grid (3 Columns) -->
+  <!-- Main Fleet Grid (4 Columns) -->
   <main class="fleet-container">
     <!-- Column: Server Desktop -->
     <section class="host-column" id="col-server">
@@ -162,6 +162,35 @@
         <!-- Injetado via JS -->
       </div>
     </section>
+
+    <!-- Column: AWS (orquestrador) -->
+    <section class="host-column" id="col-aws">
+      <div class="host-header collapsible" id="header-aws" onclick="toggleHost('aws')" role="button" tabindex="0" aria-expanded="true" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHost('aws');}">
+        <div class="host-title-row">
+          <div class="host-name">
+            <span class="collapse-chevron" id="chev-aws">▾</span>
+            <span class="host-icon">☁️</span>
+            <div>
+              <h2>hermes-aws</h2>
+              <span class="host-ip">100.127.79.81 • AWS Orquestrador</span>
+            </div>
+          </div>
+          <div class="host-status-badge" id="status-badge-aws">
+            <span class="dot dot-unknown"></span> verificando…
+          </div>
+        </div>
+        <div class="host-meta">
+          <span><span class="host-agent-count" id="count-aws">0</span> Gateway: <strong id="gw-aws">—</strong></span>
+          <div class="host-actions">
+            <button class="btn-xs btn-restart" onclick="restartHost('aws')" title="Reiniciar Gateway">🔄 Reiniciar</button>
+            <button class="btn-xs btn-log" onclick="openLogs('aws')" title="Ver Logs do Gateway">📋 Logs</button>
+          </div>
+        </div>
+      </div>
+      <div class="agents-list" id="agents-aws">
+        <!-- Injetado via JS -->
+      </div>
+    </section>
   </main>
 
   <!-- Modal: Troca de Modelo em Lote -->
@@ -179,6 +208,7 @@
             <option value="server">🖥️ Apenas server-desktop (4 agentes)</option>
             <option value="acer">💻 Apenas acer (5 agentes)</option>
             <option value="windows">🪟 Apenas windows (4 agentes)</option>
+            <option value="aws">☁️ Apenas aws (1 agente)</option>
           </select>
           <small class="form-warning hidden" id="batch-target-warning"></small>
         </div>

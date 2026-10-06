@@ -295,7 +295,7 @@ router.post('/:pc/:profile/model', wrap(async (req, res) => {
 router.post('/batch', wrap(async (req, res) => {
   const target = safeBatchTarget(req.body.target);
   if (!target) {
-    return res.status(400).json({ success: false, error: 'Alvo inválido. Use: all, server, acer ou windows.' });
+    return res.status(400).json({ success: false, error: 'Alvo inválido. Use: all, server, acer, windows ou aws.' });
   }
 
   const payload = readModelPayload(req.body || {});

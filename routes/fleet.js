@@ -64,7 +64,8 @@ router.post('/restart/:pc', wrap(async (req, res) => {
 
   if (pc === 'all') {
     const results = {};
-    for (const h of ['server', 'acer', 'windows']) {
+    const todos = Object.keys(HOSTS_INFO);
+    for (const h of todos) {
       const r = await restartHermesGateway(h);
       if (r.success) panelState.markRestarted(h);
       invalidateRuntime(h);
@@ -73,9 +74,9 @@ router.post('/restart/:pc', wrap(async (req, res) => {
     const okCount = Object.values(results).filter((r) => r.success).length;
     // Antes esta rota respondia `success: true` mesmo com os 3 hosts falhando.
     return res.status(okCount === 0 ? 500 : 200).json({
-      success: okCount === 3,
-      partial: okCount > 0 && okCount < 3,
-      message: `Reinício concluído em ${okCount}/3 computadores`,
+      success: okCount === todos.length,
+      partial: okCount > 0 && okCount < todos.length,
+      message: `Reinício concluído em ${okCount}/${todos.length} computadores`,
       results
     });
   }
@@ -113,6 +114,9 @@ router.post('/test-provider', wrap(async (req, res) => {
 
   if (pc === 'server' || pc === 'acer') {
     cmd = `python3 ~/.hermes/scripts/testar-provider-perfil.py ${targetProfile}`;
+  } else if (pc === 'aws') {
+    // runtime do PM (instalador oficial, sem venv): o hermes-python carrega as dependências do Hermes
+    cmd = `~/.hermes/scripts/hermes-python ~/.hermes/scripts/testar-provider-perfil.py ${targetProfile}`;
   } else if (pc === 'windows') {
     cmd = `powershell -Command "& 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe' 'C:\\Users\\Usuario\\AppData\\Local\\hermes\\scripts\\testar-provider-perfil.py' ${targetProfile}"`;
   }
@@ -155,6 +159,11 @@ router.post('/heal/:pc', wrap(async (req, res) => {
       message: `Cura executada em ${okCount}/3 computadores`,
       results
     });
+  }
+
+  if (pc === 'aws') {
+    // a AWS tem um Hermes só (raiz, sem perfis): não há .env de perfil para curar
+    return res.json({ success: true, pc, error: null, output: 'hermes-aws não tem perfis — nada a curar.' });
   }
 
   const execRes = await runOnHost(pc, cmdFor(pc), { timeout: 30000 });

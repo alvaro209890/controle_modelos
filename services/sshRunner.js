@@ -48,7 +48,9 @@ function runLocalCommand(cmd, options = {}) {
     const timeout = options.timeout || 15000;
     const startTime = Date.now();
 
-    exec(cmd, { timeout, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+    // options.input vai pelo stdin do processo (e atravessa o ssh): conteúdo grande não cabe
+    // na linha de comando — o Linux recusa argumento > 128 KB com spawn E2BIG.
+    const child = exec(cmd, { timeout, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
       const durationMs = Date.now() - startTime;
       if (error) {
         return resolve({
@@ -69,6 +71,7 @@ function runLocalCommand(cmd, options = {}) {
         durationMs
       });
     });
+    if (options.input !== undefined) child.stdin.end(options.input);
   });
 }
 
@@ -114,7 +117,7 @@ async function probeHost(host) {
  * gateway naquela máquina.
  */
 async function gatewayStatus(host) {
-  if (host === 'server' || host === 'acer') {
+  if (host === 'server' || host === 'acer' || host === 'aws') {
     const check = await runOnHost(host, 'systemctl --user is-active hermes-gateway.service', { timeout: 12000 });
     const state = (check.stdout || '').trim();
     return { running: state === 'active', detail: state || (check.stderr || check.error || 'desconhecido') };
@@ -160,9 +163,9 @@ async function restartHermesGateway(host) {
     return runLocalCommand(`${busEnv} systemctl --user restart hermes-gateway.service`, { timeout: 60000 });
   }
 
-  if (host === 'acer') {
+  if (host === 'acer' || host === 'aws') {
     // Shell de login via SSH já injeta o bus; por segurança aponta o XDG_RUNTIME_DIR.
-    return runOnHost('acer', `${busEnv} systemctl --user restart hermes-gateway.service`, { timeout: 60000 });
+    return runOnHost(host, `${busEnv} systemctl --user restart hermes-gateway.service`, { timeout: 60000 });
   }
 
   if (host === 'windows') {

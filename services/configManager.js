@@ -79,15 +79,17 @@ async function writeRawConfig(pc, configPath, newContent) {
     }
   }
 
-  // Backup e gravação remota no Linux (acer) — grava em tmp e move (atômico)
-  if (pc === 'acer') {
+  // Backup e gravação remota no Linux (acer, aws) — grava em tmp e move (atômico)
+  if (pc === 'acer' || pc === 'aws') {
     const backupPath = `${configPath}.bak-controle-${timestamp}`;
     const tmpPath = `${configPath}.tmp-controle-${timestamp}`;
     const base64Content = Buffer.from(newContent, 'utf8').toString('base64');
-    const remoteCmd = `cp "${configPath}" "${backupPath}" && echo "${base64Content}" | base64 -d > "${tmpPath}" && mv "${tmpPath}" "${configPath}" && rm -f "${tmpPath}"`;
-    const res = await runOnHost(pc, remoteCmd, { timeout: 30000 });
+    // O conteúdo vai pelo stdin do ssh: embutido no comando, um config grande (hermes-aws: 111 KB)
+    // estourava o limite de argumento do Linux (spawn E2BIG). Preserva o modo do arquivo.
+    const remoteCmd = `cp -p "${configPath}" "${backupPath}" && base64 -d > "${tmpPath}" && chmod --reference="${configPath}" "${tmpPath}" && mv "${tmpPath}" "${configPath}"`;
+    const res = await runOnHost(pc, remoteCmd, { timeout: 30000, input: base64Content });
     if (!res.success) {
-      return { success: false, error: `Falha ao gravar via SSH no acer: ${res.stderr || res.error}` };
+      return { success: false, error: `Falha ao gravar via SSH no ${pc}: ${res.stderr || res.error}` };
     }
     return { success: true, backupPath };
   }
